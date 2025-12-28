@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/harshitchoudhary/dsaprep/internal/codeforces"
-	"github.com/harshitchoudhary/dsaprep/internal/config"
+	"github.com/harshit-vibes/dsaprep/internal/codeforces"
+	"github.com/harshit-vibes/dsaprep/internal/config"
 )
 
 var randomCmd = &cobra.Command{

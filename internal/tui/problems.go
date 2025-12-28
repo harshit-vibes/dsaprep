@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/harshitchoudhary/dsaprep/internal/codeforces"
+	"github.com/harshit-vibes/dsaprep/internal/codeforces"
 )
 
 // ProblemsModel is the model for the problems browser view

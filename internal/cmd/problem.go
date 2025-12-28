@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/harshitchoudhary/dsaprep/internal/codeforces"
+	"github.com/harshit-vibes/dsaprep/internal/codeforces"
 )
 
 var problemCmd = &cobra.Command{

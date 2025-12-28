@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/harshitchoudhary/dsaprep/internal/codeforces"
+	"github.com/harshit-vibes/dsaprep/internal/codeforces"
 )
 
 // View represents the current view/screen

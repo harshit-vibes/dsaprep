@@ -1,4 +1,4 @@
-module github.com/harshitchoudhary/dsaprep
+module github.com/harshit-vibes/dsaprep
 
 go 1.22
 

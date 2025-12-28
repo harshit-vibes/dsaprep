@@ -24,9 +24,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/harshitchoudhary/dsaprep/internal/cmd.Version={{.Version}}
-      - -X github.com/harshitchoudhary/dsaprep/internal/cmd.Commit={{.Commit}}
-      - -X github.com/harshitchoudhary/dsaprep/internal/cmd.BuildDate={{.Date}}
+      - -X github.com/harshit-vibes/dsaprep/internal/cmd.Version={{.Version}}
+      - -X github.com/harshit-vibes/dsaprep/internal/cmd.Commit={{.Commit}}
+      - -X github.com/harshit-vibes/dsaprep/internal/cmd.BuildDate={{.Date}}
 
 archives:
   - id: default
@@ -54,9 +54,9 @@ changelog:
 brews:
   - name: dsaprep
     repository:
-      owner: harshitchoudhary
+      owner: harshit-vibes
       name: homebrew-tap
-    homepage: "https://github.com/harshitchoudhary/dsaprep"
+    homepage: "https://github.com/harshit-vibes/dsaprep"
     description: "A Codeforces practice companion with beautiful TUI"
     license: "MIT"
     install: |

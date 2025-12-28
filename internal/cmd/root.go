@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/harshitchoudhary/dsaprep/internal/config"
-	"github.com/harshitchoudhary/dsaprep/internal/tui"
+	"github.com/harshit-vibes/dsaprep/internal/config"
+	"github.com/harshit-vibes/dsaprep/internal/tui"
 )
 
 var (

@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/spf13/cobra"
-	"github.com/harshitchoudhary/dsaprep/internal/config"
+	"github.com/harshit-vibes/dsaprep/internal/config"
 )
 
 var configCmd = &cobra.Command{

@@ -18,37 +18,37 @@ A beautiful terminal UI application for practicing competitive programming probl
 ### Using Go (requires Go 1.22+)
 
 ```bash
-go install github.com/harshitchoudhary/dsaprep/cmd/dsaprep@latest
+go install github.com/harshit-vibes/dsaprep/cmd/dsaprep@latest
 ```
 
 ### Using Homebrew (macOS/Linux)
 
 ```bash
-brew tap harshitchoudhary/tap
+brew tap harshit-vibes/tap
 brew install dsaprep
 ```
 
 ### Download Binary
 
-Download pre-built binaries from the [Releases](https://github.com/harshitchoudhary/dsaprep/releases) page.
+Download pre-built binaries from the [Releases](https://github.com/harshit-vibes/dsaprep/releases) page.
 
 #### macOS (Apple Silicon)
 ```bash
-curl -Lo dsaprep.tar.gz https://github.com/harshitchoudhary/dsaprep/releases/latest/download/dsaprep_Darwin_arm64.tar.gz
+curl -Lo dsaprep.tar.gz https://github.com/harshit-vibes/dsaprep/releases/latest/download/dsaprep_Darwin_arm64.tar.gz
 tar -xzf dsaprep.tar.gz
 sudo mv dsaprep /usr/local/bin/
 ```
 
 #### macOS (Intel)
 ```bash
-curl -Lo dsaprep.tar.gz https://github.com/harshitchoudhary/dsaprep/releases/latest/download/dsaprep_Darwin_amd64.tar.gz
+curl -Lo dsaprep.tar.gz https://github.com/harshit-vibes/dsaprep/releases/latest/download/dsaprep_Darwin_amd64.tar.gz
 tar -xzf dsaprep.tar.gz
 sudo mv dsaprep /usr/local/bin/
 ```
 
 #### Linux
 ```bash
-curl -Lo dsaprep.tar.gz https://github.com/harshitchoudhary/dsaprep/releases/latest/download/dsaprep_Linux_amd64.tar.gz
+curl -Lo dsaprep.tar.gz https://github.com/harshit-vibes/dsaprep/releases/latest/download/dsaprep_Linux_amd64.tar.gz
 tar -xzf dsaprep.tar.gz
 sudo mv dsaprep /usr/local/bin/
 ```
@@ -56,7 +56,7 @@ sudo mv dsaprep /usr/local/bin/
 ### Build from Source
 
 ```bash
-git clone https://github.com/harshitchoudhary/dsaprep.git
+git clone https://github.com/harshit-vibes/dsaprep.git
 cd dsaprep
 make install
 ```
@@ -132,7 +132,7 @@ theme: dark
 
 ```bash
 # Clone the repository
-git clone https://github.com/harshitchoudhary/dsaprep.git
+git clone https://github.com/harshit-vibes/dsaprep.git
 cd dsaprep
 
 # Install dependencies

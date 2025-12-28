@@ -7,8 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/harshitchoudhary/dsaprep/internal/codeforces"
-	"github.com/harshitchoudhary/dsaprep/internal/config"
+	"github.com/harshit-vibes/dsaprep/internal/codeforces"
+	"github.com/harshit-vibes/dsaprep/internal/config"
 )
 
 // DashboardModel is the model for the dashboard view
