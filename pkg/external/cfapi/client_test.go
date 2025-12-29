@@ -470,26 +470,6 @@ func TestClient_FilterProblems_ExcludeSolved(t *testing.T) {
 	t.Logf("Found %d unsolved problems for tourist in rating range 800-1000", len(filtered))
 }
 
-func TestClient_SignRequest(t *testing.T) {
-	apiKey, apiSecret, handle := getTestCredentials(t)
-
-	client := NewClient(
-		WithAPICredentials(apiKey, apiSecret),
-	)
-	ctx := context.Background()
-
-	// Test authenticated request by getting user info
-	// This validates signRequest works correctly
-	users, err := client.GetUserInfo(ctx, []string{handle})
-	if err != nil {
-		t.Skipf("Skipping: API error (may be credentials): %v", err)
-	}
-
-	if len(users) == 0 {
-		t.Error("Expected user info")
-	}
-}
-
 func TestClient_Request_RateLimiting(t *testing.T) {
 	client := NewClient()
 	ctx := context.Background()

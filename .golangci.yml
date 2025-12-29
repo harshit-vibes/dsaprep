@@ -1,0 +1,35 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+linters-settings:
+  errcheck:
+    # Ignore error checks for these functions in test files
+    exclude-functions:
+      - os.Setenv
+      - os.Chdir
+      - (testing.T).TempDir
+
+issues:
+  # Don't fail on errcheck warnings in test files
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+    - path: mock_test\.go
+      linters:
+        - errcheck
+    # Exclude unused functions in explore package (development/testing code)
+    - path: cmd/explore/
+      linters:
+        - unused
+        - deadcode
