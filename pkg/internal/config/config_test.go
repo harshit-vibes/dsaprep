@@ -48,10 +48,8 @@ func TestConfig_Defaults(t *testing.T) {
 		t.Fatal("Get() returned nil")
 	}
 
-	// Check default values
-	if cfg.WorkspacePath == "" {
-		// WorkspacePath can be empty by default
-	}
+	// WorkspacePath can be empty by default, which is fine
+	_ = cfg.WorkspacePath
 }
 
 func TestConfig_WorkspacePath(t *testing.T) {
