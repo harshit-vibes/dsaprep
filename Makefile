@@ -1,7 +1,7 @@
-# DSA Prep Makefile
+# cf - Codeforces CLI Makefile
 
 # Build variables
-BINARY_NAME=dsaprep
+BINARY_NAME=cf
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT?=$(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -16,12 +16,12 @@ GOFMT=$(GOCMD) fmt
 
 # Directories
 BUILD_DIR=build
-CMD_DIR=cmd/dsaprep
+CMD_DIR=cmd/cf
 
 # Linker flags
-LDFLAGS=-ldflags "-X github.com/harshitchoudhary/dsaprep/internal/cmd.Version=$(VERSION) \
-                  -X github.com/harshitchoudhary/dsaprep/internal/cmd.Commit=$(COMMIT) \
-                  -X github.com/harshitchoudhary/dsaprep/internal/cmd.BuildDate=$(BUILD_DATE)"
+LDFLAGS=-ldflags "-X github.com/harshit-vibes/cf/pkg/cmd.Version=$(VERSION) \
+                  -X github.com/harshit-vibes/cf/pkg/cmd.Commit=$(COMMIT) \
+                  -X github.com/harshit-vibes/cf/pkg/cmd.BuildDate=$(BUILD_DATE)"
 
 .PHONY: all build clean dev install test fmt lint deps help run
 
@@ -90,7 +90,7 @@ build-all: clean
 
 # Show help
 help:
-	@echo "DSA Prep Build Commands"
+	@echo "cf - Codeforces CLI Build Commands"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""

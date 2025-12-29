@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/config"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/workspace"
+	"github.com/harshit-vibes/cf/pkg/internal/config"
+	"github.com/harshit-vibes/cf/pkg/internal/workspace"
 )
 
 func TestEnvFileCheck_Name(t *testing.T) {
@@ -314,7 +314,7 @@ func TestEnvFileCheck_Check_FileNotFound(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Ensure no .env file exists
-	os.Remove(filepath.Join(tmpDir, ".dsaprep.env"))
+	os.Remove(filepath.Join(tmpDir, ".cf.env"))
 
 	check := &EnvFileCheck{}
 	result := check.Check(context.Background())
@@ -344,7 +344,7 @@ func TestEnvFileCheck_Check_NoHandle(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file without handle
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=
 CF_API_KEY=
 CF_API_SECRET=
@@ -379,7 +379,7 @@ func TestEnvFileCheck_Check_Healthy(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create valid env file with handle
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_API_KEY=testkey
 CF_API_SECRET=testsecret
@@ -417,7 +417,7 @@ func TestEnvFileCheck_AutoFix(t *testing.T) {
 	}
 
 	// Verify env file was created
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	if _, err := os.Stat(envPath); os.IsNotExist(err) {
 		t.Error("AutoFix() should create env file")
 	}
@@ -594,7 +594,7 @@ func TestSessionCheck_Check_NoCFClearance(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with handle but no cf_clearance
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_API_KEY=testkey
 CF_API_SECRET=testsecret
@@ -629,7 +629,7 @@ func TestSessionCheck_Check_CFClearanceExpired(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with cf_clearance but expired
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_CLEARANCE=someclearancevalue
 CF_CLEARANCE_EXPIRES=1
@@ -661,7 +661,7 @@ func TestSessionCheck_Check_NoSessionCookies(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with valid cf_clearance but no session cookies
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_CLEARANCE=someclearancevalue
 CF_CLEARANCE_EXPIRES=9999999999
@@ -693,7 +693,7 @@ func TestSessionCheck_Check_SessionConfigured(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with all required cookies
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_CLEARANCE=someclearancevalue
 CF_CLEARANCE_EXPIRES=9999999999
@@ -728,7 +728,7 @@ func TestSessionCheck_Check_MissingHandle(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with cookies but no handle
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_CLEARANCE=someclearancevalue
 CF_CLEARANCE_EXPIRES=9999999999
 CF_JSESSIONID=somejsessionid

@@ -35,7 +35,7 @@ func TestLoadCredentials_MalformedLine(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with malformed lines (no equals sign)
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 malformed line without equals
 CF_API_KEY=testkey
@@ -69,7 +69,7 @@ func TestLoadCredentials_EmptyCFClearanceExpires(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with empty CF_CLEARANCE_EXPIRES
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_CLEARANCE=test_clearance
 CF_CLEARANCE_EXPIRES=
@@ -100,7 +100,7 @@ func TestEnsureEnvFile_AlreadyExists(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create the env file first
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	originalContent := "# Original content\nCF_HANDLE=original"
 	err := os.WriteFile(envPath, []byte(originalContent), 0600)
 	if err != nil {
@@ -139,7 +139,7 @@ func TestInit_ExistingConfigFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a config directory and file first
-	configDirPath := filepath.Join(tmpDir, ".dsaprep")
+	configDirPath := filepath.Join(tmpDir, ".cf")
 	err := os.MkdirAll(configDirPath, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create config dir: %v", err)

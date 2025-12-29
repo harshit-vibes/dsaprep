@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfapi"
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfweb"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/config"
+	"github.com/harshit-vibes/cf/pkg/external/cfapi"
+	"github.com/harshit-vibes/cf/pkg/external/cfweb"
+	"github.com/harshit-vibes/cf/pkg/internal/config"
 )
 
 // These tests require real credentials and network access

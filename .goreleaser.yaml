@@ -3,16 +3,16 @@
 
 version: 2
 
-project_name: dsaprep
+project_name: cf
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: dsaprep
-    main: ./cmd/dsaprep
-    binary: dsaprep
+  - id: cf
+    main: ./cmd/cf
+    binary: cf
     env:
       - CGO_ENABLED=0
     goos:
@@ -24,9 +24,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/harshit-vibes/dsaprep/internal/cmd.Version={{.Version}}
-      - -X github.com/harshit-vibes/dsaprep/internal/cmd.Commit={{.Commit}}
-      - -X github.com/harshit-vibes/dsaprep/internal/cmd.BuildDate={{.Date}}
+      - -X github.com/harshit-vibes/cf/pkg/cmd.Version={{.Version}}
+      - -X github.com/harshit-vibes/cf/pkg/cmd.Commit={{.Commit}}
+      - -X github.com/harshit-vibes/cf/pkg/cmd.BuildDate={{.Date}}
 
 archives:
   - id: default
@@ -52,14 +52,14 @@ changelog:
 
 # Homebrew tap (uncomment after creating harshit-vibes/homebrew-tap repo)
 # brews:
-#   - name: dsaprep
+#   - name: cf
 #     repository:
 #       owner: harshit-vibes
 #       name: homebrew-tap
-#     homepage: "https://github.com/harshit-vibes/dsaprep"
-#     description: "A Codeforces practice companion with beautiful TUI"
+#     homepage: "https://github.com/harshit-vibes/cf"
+#     description: "Codeforces CLI - competitive programming companion with TUI"
 #     license: "MIT"
 #     install: |
-#       bin.install "dsaprep"
+#       bin.install "cf"
 #     test: |
-#       system "#{bin}/dsaprep", "version"
+#       system "#{bin}/cf", "version"

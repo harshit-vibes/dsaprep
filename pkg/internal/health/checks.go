@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/config"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/schema"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/workspace"
+	"github.com/harshit-vibes/cf/pkg/internal/config"
+	"github.com/harshit-vibes/cf/pkg/internal/schema"
+	"github.com/harshit-vibes/cf/pkg/internal/workspace"
 )
 
 // EnvFileCheck checks the .env file
@@ -64,7 +64,7 @@ func (c *EnvFileCheck) Check(ctx context.Context) Result {
 			Category: c.Category(),
 			Status:   StatusDegraded,
 			Message:  "CF handle not configured",
-			Details:  "Set CF_HANDLE in ~/.dsaprep.env",
+			Details:  "Set CF_HANDLE in ~/.cf.env",
 			Action:   ActionUserPrompt,
 			Duration: time.Since(start),
 		}
@@ -104,7 +104,7 @@ func (c *WorkspaceCheck) Check(ctx context.Context) Result {
 			Category:    c.Category(),
 			Status:      StatusCritical,
 			Message:     "Workspace not initialized",
-			Details:     "Run 'dsaprep init' to create workspace",
+			Details:     "Run 'cf init' to create workspace",
 			Recoverable: true,
 			Action:      ActionAutoFix,
 			Duration:    time.Since(start),
@@ -303,7 +303,7 @@ func (c *SessionCheck) Check(ctx context.Context) Result {
 			Category:    c.Category(),
 			Status:      StatusDegraded,
 			Message:     "Missing handle or cookies",
-			Details:     "Set CF_HANDLE and all session cookies in ~/.dsaprep.env",
+			Details:     "Set CF_HANDLE and all session cookies in ~/.cf.env",
 			Recoverable: true,
 			Action:      ActionUserPrompt,
 			Duration:    time.Since(start),

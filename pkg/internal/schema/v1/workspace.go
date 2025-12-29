@@ -4,7 +4,7 @@ package v1
 import (
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/schema"
+	"github.com/harshit-vibes/cf/pkg/internal/schema"
 )
 
 // Workspace represents the workspace manifest (workspace.yaml)

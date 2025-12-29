@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/config"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/health"
+	"github.com/harshit-vibes/cf/pkg/internal/config"
+	"github.com/harshit-vibes/cf/pkg/internal/health"
 	"github.com/spf13/cobra"
 )
 
@@ -20,8 +20,8 @@ func TestRootCommand_Exists(t *testing.T) {
 }
 
 func TestRootCommand_Use(t *testing.T) {
-	if rootCmd.Use != "dsaprep" {
-		t.Errorf("rootCmd.Use = %v, want dsaprep", rootCmd.Use)
+	if rootCmd.Use != "cf" {
+		t.Errorf("rootCmd.Use = %v, want cf", rootCmd.Use)
 	}
 }
 
@@ -437,7 +437,7 @@ func TestRunStartupChecks_WithChecks(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create a minimal env file
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_API_KEY=
 CF_API_SECRET=
@@ -484,7 +484,7 @@ func TestRunPreChecks_RegularCommand(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
 
 	skipChecks = true
@@ -506,7 +506,7 @@ func TestHealthCommand_RunE(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
 
 	// Reset verbose and skipChecks
@@ -550,8 +550,8 @@ func TestInitConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("HOME", tmpDir)
 
-	// Create .dsaprep config dir
-	configDir := filepath.Join(tmpDir, ".dsaprep")
+	// Create .cf config dir
+	configDir := filepath.Join(tmpDir, ".cf")
 	os.MkdirAll(configDir, 0755)
 
 	// This should not panic
@@ -584,7 +584,7 @@ func TestRunStartupChecks_WithAPICredentials(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with API credentials
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_API_KEY=testkey
 CF_API_SECRET=testsecret
@@ -592,7 +592,7 @@ CF_API_SECRET=testsecret
 	os.WriteFile(envPath, []byte(envContent), 0600)
 
 	// Initialize config
-	config.Init(filepath.Join(tmpDir, ".dsaprep"))
+	config.Init(filepath.Join(tmpDir, ".cf"))
 
 	skipChecks = false
 	verbose = false
@@ -612,7 +612,7 @@ func TestRunStartupChecks_WithWorkspace(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
 
 	// Initialize workspace

@@ -1,4 +1,4 @@
-// Package cmd provides CLI commands for dsaprep
+// Package cmd provides CLI commands for cf
 package cmd
 
 import (
@@ -9,12 +9,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfapi"
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfweb"
-	exthealth "github.com/harshit-vibes/dsaprep/pkg/external/health"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/config"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/health"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/workspace"
+	"github.com/harshit-vibes/cf/pkg/external/cfapi"
+	"github.com/harshit-vibes/cf/pkg/external/cfweb"
+	exthealth "github.com/harshit-vibes/cf/pkg/external/health"
+	"github.com/harshit-vibes/cf/pkg/internal/config"
+	"github.com/harshit-vibes/cf/pkg/internal/health"
+	"github.com/harshit-vibes/cf/pkg/internal/workspace"
+	"github.com/harshit-vibes/cf/pkg/tui"
 )
 
 var (
@@ -29,21 +30,21 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "dsaprep",
-	Short: "DSA Practice CLI - Your competitive programming companion",
-	Long: `dsaprep is a CLI tool for practicing Data Structures and Algorithms
-with Codeforces integration. It provides:
+	Use:   "cf",
+	Short: "Codeforces CLI - Your competitive programming companion",
+	Long: `cf is a command-line tool for competitive programming with Codeforces.
 
+Features:
   • Problem parsing and workspace management
   • Solution submission and verdict tracking
   • Practice progress tracking
-  • Beautiful TUI dashboard`,
+  • Beautiful TUI dashboard
+
+Run 'cf' without arguments to launch the interactive TUI.`,
 	PersistentPreRunE: runPreChecks,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: Launch TUI
-		fmt.Println("DSA Prep CLI v" + Version)
-		fmt.Println("TUI not yet implemented. Use --help for available commands.")
-		return nil
+		// Launch TUI
+		return tui.Run()
 	},
 }
 
@@ -70,11 +71,31 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&skipChecks, "skip-checks", false, "Skip startup health checks")
 	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Verbose output")
 
-	// Add subcommands
+	// Core commands
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(healthCmd)
+	rootCmd.AddCommand(tuiCmd)
+
+	// Feature commands
+	rootCmd.AddCommand(problemCmd)
+	rootCmd.AddCommand(userCmd)
+	rootCmd.AddCommand(contestCmd)
+	rootCmd.AddCommand(statsCmd)
+	rootCmd.AddCommand(configCmd)
+
+	// Legacy parse command (deprecated, redirects to problem parse)
 	rootCmd.AddCommand(parseCmd)
+}
+
+// tuiCmd launches the TUI explicitly
+var tuiCmd = &cobra.Command{
+	Use:   "tui",
+	Short: "Launch the interactive TUI",
+	Long:  `Launch the interactive terminal user interface for browsing problems, viewing stats, and more.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return tui.Run()
+	},
 }
 
 func initConfig() {
@@ -175,7 +196,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("dsaprep %s\n", Version)
+		fmt.Printf("cf %s\n", Version)
 		fmt.Printf("  Commit:     %s\n", Commit)
 		fmt.Printf("  Build Date: %s\n", BuildDate)
 	},
@@ -184,7 +205,7 @@ var versionCmd = &cobra.Command{
 // initCmd initializes the workspace
 var initCmd = &cobra.Command{
 	Use:   "init [path]",
-	Short: "Initialize a new dsaprep workspace",
+	Short: "Initialize a new cf workspace",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := "."
@@ -229,43 +250,16 @@ var healthCmd = &cobra.Command{
 	},
 }
 
-// parseCmd parses a problem from CF
+// parseCmd is deprecated, kept for backward compatibility
 var parseCmd = &cobra.Command{
-	Use:   "parse <contest_id> <problem_index>",
-	Short: "Parse a problem from Codeforces",
-	Args:  cobra.ExactArgs(2),
+	Use:        "parse <contest_id> <problem_index>",
+	Short:      "[Deprecated] Use 'cf problem parse' instead",
+	Args:       cobra.ExactArgs(2),
+	Deprecated: "use 'cf problem parse' instead",
+	Hidden:     true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var contestID int
-		if _, err := fmt.Sscanf(args[0], "%d", &contestID); err != nil {
-			return fmt.Errorf("invalid contest ID: %s", args[0])
-		}
-		problemIndex := args[1]
-
-		parser := cfweb.NewParserWithClient(nil)
-		problem, err := parser.ParseProblem(contestID, problemIndex)
-		if err != nil {
-			return fmt.Errorf("failed to parse problem: %w", err)
-		}
-
-		fmt.Printf("✓ Parsed: %s. %s\n", problem.Index, problem.Name)
-		fmt.Printf("  Rating: %d | Time: %s | Memory: %s\n",
-			problem.Rating, problem.TimeLimit, problem.MemoryLimit)
-		fmt.Printf("  Tags: %v\n", problem.Tags)
-		fmt.Printf("  Samples: %d\n", len(problem.Samples))
-
-		// Save to workspace if available
-		cfg := config.Get()
-		if cfg != nil && cfg.WorkspacePath != "" {
-			ws := workspace.New(cfg.WorkspacePath)
-			if ws.Exists() {
-				schemaProblem := problem.ToSchemaProblem()
-				if err := ws.SaveProblem(schemaProblem); err != nil {
-					return fmt.Errorf("failed to save problem: %w", err)
-				}
-				fmt.Printf("✓ Saved to workspace\n")
-			}
-		}
-
-		return nil
+		fmt.Println("⚠️  'cf parse' is deprecated. Use 'cf problem parse' instead.")
+		fmt.Println()
+		return runProblemParse(cmd, args)
 	},
 }

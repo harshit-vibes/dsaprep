@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfapi"
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfweb"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/config"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/health"
+	"github.com/harshit-vibes/cf/pkg/external/cfapi"
+	"github.com/harshit-vibes/cf/pkg/external/cfweb"
+	"github.com/harshit-vibes/cf/pkg/internal/config"
+	"github.com/harshit-vibes/cf/pkg/internal/health"
 )
 
 // CFAPICheck checks the Codeforces API availability
@@ -204,7 +204,7 @@ func (c *CFHandleCheck) Check(ctx context.Context) health.Result {
 			Category: c.Category(),
 			Status:   health.StatusDegraded,
 			Message:  "CF handle not configured",
-			Details:  "Set CF_HANDLE in ~/.dsaprep.env",
+			Details:  "Set CF_HANDLE in ~/.cf.env",
 			Action:   health.ActionUserPrompt,
 			Duration: time.Since(start),
 		}
@@ -327,7 +327,7 @@ func (c *CFClearanceCheck) Check(ctx context.Context) health.Result {
 			Category: c.Category(),
 			Status:   health.StatusDegraded,
 			Message:  "cf_clearance not configured",
-			Details:  "Run 'dsaprep token refresh' or set CF_CLEARANCE manually",
+			Details:  "Run 'cf token refresh' or set CF_CLEARANCE manually",
 			Action:   health.ActionUserPrompt,
 			Duration: time.Since(start),
 		}
@@ -339,7 +339,7 @@ func (c *CFClearanceCheck) Check(ctx context.Context) health.Result {
 			Category:    c.Category(),
 			Status:      health.StatusDegraded,
 			Message:     "cf_clearance expired",
-			Details:     "Run 'dsaprep token refresh' to update",
+			Details:     "Run 'cf token refresh' to update",
 			Recoverable: true,
 			Action:      health.ActionUserPrompt,
 			Duration:    time.Since(start),

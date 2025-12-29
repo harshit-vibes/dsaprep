@@ -6,6 +6,7 @@ dist/
 *.dll
 *.so
 *.dylib
+/cf
 /dsaprep
 /explore
 
@@ -41,6 +42,7 @@ Thumbs.db
 .test-workspace/
 
 # Environment files with credentials
+.cf.env
 .dsaprep.env
 *.env.local
 

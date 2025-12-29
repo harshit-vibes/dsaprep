@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfapi"
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfweb"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/health"
+	"github.com/harshit-vibes/cf/pkg/external/cfapi"
+	"github.com/harshit-vibes/cf/pkg/external/cfweb"
+	"github.com/harshit-vibes/cf/pkg/internal/health"
 )
 
 func TestCFAPICheck_Name(t *testing.T) {

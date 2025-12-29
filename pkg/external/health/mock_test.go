@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfapi"
-	"github.com/harshit-vibes/dsaprep/pkg/external/cfweb"
-	"github.com/harshit-vibes/dsaprep/pkg/internal/health"
+	"github.com/harshit-vibes/cf/pkg/external/cfapi"
+	"github.com/harshit-vibes/cf/pkg/external/cfweb"
+	"github.com/harshit-vibes/cf/pkg/internal/health"
 )
 
 // ============ Mock Transport for HTTP Mocking ============
@@ -91,7 +91,7 @@ func TestCFHandleCheck_Check_NoHandle(t *testing.T) {
 	origHome := os.Getenv("HOME")
 	defer os.Setenv("HOME", origHome)
 
-	// Use temp dir with no .dsaprep.env file
+	// Use temp dir with no .cf.env file
 	tmpDir := t.TempDir()
 	os.Setenv("HOME", tmpDir)
 
@@ -120,7 +120,7 @@ func TestCFHandleCheck_Check_NilClientWithHandle(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with handle
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	err := os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
 	if err != nil {
 		t.Fatalf("Failed to write env file: %v", err)
@@ -149,7 +149,7 @@ func TestCFHandleCheck_Check_GetUserInfoError(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with handle
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	err := os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
 	if err != nil {
 		t.Fatalf("Failed to write env file: %v", err)
@@ -187,7 +187,7 @@ func TestCFHandleCheck_Check_HandleNotFound(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with handle
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	err := os.WriteFile(envPath, []byte("CF_HANDLE=nonexistent_user_12345678\n"), 0600)
 	if err != nil {
 		t.Fatalf("Failed to write env file: %v", err)
@@ -218,7 +218,7 @@ func TestCFHandleCheck_Check_ValidHandle(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with a known valid handle
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	err := os.WriteFile(envPath, []byte("CF_HANDLE=tourist\n"), 0600)
 	if err != nil {
 		t.Fatalf("Failed to write env file: %v", err)
@@ -250,7 +250,7 @@ func TestCFClearanceCheck_Check_EmptyClearance(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file without cf_clearance
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	err := os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
 	if err != nil {
 		t.Fatalf("Failed to write env file: %v", err)
@@ -279,7 +279,7 @@ func TestCFClearanceCheck_Check_ExpiredClearance(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with expired cf_clearance (timestamp in the past)
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	content := `CF_HANDLE=testuser
 CF_CLEARANCE=test_clearance
 CF_CLEARANCE_EXPIRES=1000000000
@@ -314,7 +314,7 @@ func TestCFClearanceCheck_Check_ExpiringSoon(t *testing.T) {
 
 	// Create env file with cf_clearance expiring in 2 minutes
 	expiresAt := time.Now().Add(2 * time.Minute).Unix()
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	err := os.WriteFile(envPath, []byte(
 		"CF_HANDLE=testuser\nCF_CLEARANCE=test_clearance\nCF_CLEARANCE_EXPIRES="+
 			formatTimestamp(expiresAt)+"\nCF_CLEARANCE_UA=TestUA\n"), 0600)
@@ -346,7 +346,7 @@ func TestCFClearanceCheck_Check_ValidClearance(t *testing.T) {
 
 	// Create env file with cf_clearance valid for 1 hour
 	expiresAt := time.Now().Add(1 * time.Hour).Unix()
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	err := os.WriteFile(envPath, []byte(
 		"CF_HANDLE=testuser\nCF_CLEARANCE=test_clearance\nCF_CLEARANCE_EXPIRES="+
 			formatTimestamp(expiresAt)+"\nCF_CLEARANCE_UA=TestUA\n"), 0600)

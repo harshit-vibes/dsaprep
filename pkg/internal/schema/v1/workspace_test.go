@@ -3,7 +3,7 @@ package v1
 import (
 	"testing"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/schema"
+	"github.com/harshit-vibes/cf/pkg/internal/schema"
 )
 
 func TestNewWorkspace(t *testing.T) {

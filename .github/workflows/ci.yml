@@ -53,7 +53,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          go build -o dsaprep-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/dsaprep
+          go build -o cf-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/cf
 
   lint:
     name: Lint

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/schema"
+	"github.com/harshit-vibes/cf/pkg/internal/schema"
 )
 
 func TestNew(t *testing.T) {

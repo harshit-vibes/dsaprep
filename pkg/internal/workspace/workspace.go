@@ -1,4 +1,4 @@
-// Package workspace manages the dsaprep workspace
+// Package workspace manages the cf workspace
 package workspace
 
 import (
@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/schema"
-	v1 "github.com/harshit-vibes/dsaprep/pkg/internal/schema/v1"
+	"github.com/harshit-vibes/cf/pkg/internal/schema"
+	v1 "github.com/harshit-vibes/cf/pkg/internal/schema/v1"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,7 +19,7 @@ const (
 	StatsDir     = "stats"
 )
 
-// Workspace manages a dsaprep workspace
+// Workspace manages a cf workspace
 type Workspace struct {
 	root     string
 	manifest *v1.Workspace

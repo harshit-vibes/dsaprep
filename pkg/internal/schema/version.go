@@ -1,4 +1,4 @@
-// Package schema provides versioned data structures for dsaprep
+// Package schema provides versioned data structures for cf
 package schema
 
 import (

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	v1 "github.com/harshit-vibes/dsaprep/pkg/internal/schema/v1"
+	v1 "github.com/harshit-vibes/cf/pkg/internal/schema/v1"
 )
 
 func TestWorkspace_SaveProblem(t *testing.T) {

@@ -196,7 +196,7 @@ func TestEnsureEnvFile(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Ensure env file doesn't exist
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	os.Remove(envPath)
 
 	// Create env file
@@ -241,7 +241,7 @@ func TestLoadCredentials(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with test values
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `CF_HANDLE=testuser
 CF_API_KEY=testkey
 CF_API_SECRET=testsecret
@@ -316,8 +316,8 @@ func TestGetEnvFilePath(t *testing.T) {
 		t.Error("GetEnvFilePath() returned empty path")
 	}
 
-	if !strings.HasSuffix(path, ".dsaprep.env") {
-		t.Errorf("GetEnvFilePath() = %v, should end with .dsaprep.env", path)
+	if !strings.HasSuffix(path, ".cf.env") {
+		t.Errorf("GetEnvFilePath() = %v, should end with .cf.env", path)
 	}
 }
 
@@ -349,7 +349,7 @@ func TestSaveCredentials(t *testing.T) {
 	}
 
 	// Verify file was created
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	if _, err := os.Stat(envPath); os.IsNotExist(err) {
 		t.Fatal("SaveCredentials() did not create the file")
 	}
@@ -597,7 +597,7 @@ func TestLoadCredentials_WithComments(t *testing.T) {
 	os.Setenv("HOME", tmpDir)
 
 	// Create env file with comments and blank lines
-	envPath := filepath.Join(tmpDir, ".dsaprep.env")
+	envPath := filepath.Join(tmpDir, ".cf.env")
 	envContent := `# This is a comment
 CF_HANDLE=testuser
 

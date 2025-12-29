@@ -100,7 +100,7 @@ func (c *Client) request(ctx context.Context, method string, params url.Values, 
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", "dsaprep/1.0")
+	req.Header.Set("User-Agent", "cf/1.0")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

@@ -40,7 +40,7 @@ func configDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".dsaprep"), nil
+	return filepath.Join(home, ".cf"), nil
 }
 
 // configFilePath returns the config file path
@@ -52,10 +52,94 @@ func configFilePath() (string, error) {
 	return filepath.Join(dir, "config.yaml"), nil
 }
 
+// MigrateFromLegacy migrates config from ~/.dsaprep to ~/.cf
+// Returns true if migration was performed
+func MigrateFromLegacy() (bool, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false, err
+	}
+
+	oldDir := filepath.Join(home, ".dsaprep")
+	newDir := filepath.Join(home, ".cf")
+	oldEnv := filepath.Join(home, ".dsaprep.env")
+	newEnv := filepath.Join(home, ".cf.env")
+
+	migrated := false
+
+	// Check if old config directory exists and new one doesn't
+	if _, err := os.Stat(oldDir); err == nil {
+		if _, err := os.Stat(newDir); os.IsNotExist(err) {
+			// Copy old directory to new location
+			if err := copyDir(oldDir, newDir); err != nil {
+				return false, fmt.Errorf("failed to migrate config directory: %w", err)
+			}
+			migrated = true
+			fmt.Printf("Migrated config: %s -> %s\n", oldDir, newDir)
+		}
+	}
+
+	// Check if old env file exists and new one doesn't
+	if _, err := os.Stat(oldEnv); err == nil {
+		if _, err := os.Stat(newEnv); os.IsNotExist(err) {
+			// Copy old env file to new location
+			if err := copyFile(oldEnv, newEnv); err != nil {
+				return false, fmt.Errorf("failed to migrate env file: %w", err)
+			}
+			migrated = true
+			fmt.Printf("Migrated credentials: %s -> %s\n", oldEnv, newEnv)
+		}
+	}
+
+	return migrated, nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0600)
+}
+
+// copyDir copies a directory from src to dst
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Calculate the destination path
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(dst, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+
+		// Copy file
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(dstPath, data, info.Mode())
+	})
+}
+
 // Init initializes the configuration
 func Init(workspacePath string) error {
 	configMu.Lock()
 	defer configMu.Unlock()
+
+	// Try to migrate from legacy config
+	if _, err := MigrateFromLegacy(); err != nil {
+		// Log but don't fail on migration errors
+		fmt.Printf("Warning: failed to migrate legacy config: %v\n", err)
+	}
 
 	dir, err := configDir()
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/schema"
+	"github.com/harshit-vibes/cf/pkg/internal/schema"
 	"gopkg.in/yaml.v3"
 )
 

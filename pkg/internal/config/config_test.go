@@ -274,8 +274,8 @@ func TestConfigDir(t *testing.T) {
 		t.Error("configDir() should return absolute path")
 	}
 
-	// Should end with .dsaprep
-	if filepath.Base(dir) != ".dsaprep" {
-		t.Errorf("configDir() should end with .dsaprep, got %v", filepath.Base(dir))
+	// Should end with .cf
+	if filepath.Base(dir) != ".cf" {
+		t.Errorf("configDir() should end with .cf, got %v", filepath.Base(dir))
 	}
 }

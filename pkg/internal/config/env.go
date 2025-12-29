@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const envFileName = ".dsaprep.env"
+const envFileName = ".cf.env"
 
 // Credentials holds CF API and cookie-based web credentials
 type Credentials struct {
@@ -45,7 +45,7 @@ func EnsureEnvFile() error {
 	}
 
 	if _, err := os.Stat(envPath); os.IsNotExist(err) {
-		content := `# DSA Prep - Codeforces Configuration
+		content := `# cf - Codeforces CLI Configuration
 # Get your API key and secret from: https://codeforces.com/settings/api
 
 # === API Authentication (for read operations) ===
@@ -143,7 +143,7 @@ func SaveCredentials(creds *Credentials) error {
 		return err
 	}
 
-	content := fmt.Sprintf(`# DSA Prep - Codeforces Configuration
+	content := fmt.Sprintf(`# cf - Codeforces CLI Configuration
 # Get your API key and secret from: https://codeforces.com/settings/api
 
 # === API Authentication (for read operations) ===

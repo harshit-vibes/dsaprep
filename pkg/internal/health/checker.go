@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/harshit-vibes/dsaprep/pkg/internal/schema"
+	"github.com/harshit-vibes/cf/pkg/internal/schema"
 )
 
 // Checker orchestrates health checks
