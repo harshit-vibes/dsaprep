@@ -3,7 +3,6 @@ package cfweb
 import (
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestNewSession(t *testing.T) {
@@ -31,244 +30,119 @@ func TestNewSession(t *testing.T) {
 	if session.GetCSRFToken() != "" {
 		t.Error("new session CSRF token should be empty")
 	}
-
-	if session.IsCFClearanceValid() {
-		t.Error("new session should not have valid cf_clearance")
-	}
-
-	if session.HasSessionCookies() {
-		t.Error("new session should not have session cookies")
-	}
 }
 
-func TestNewSessionWithUserAgent(t *testing.T) {
-	customUA := "Custom User Agent/1.0"
-	session, err := NewSessionWithUserAgent(customUA)
+func TestNewSessionWithCookie(t *testing.T) {
+	cookieStr := "JSESSIONID=test123; 39ce7=abc456"
+	session, err := NewSessionWithCookie(cookieStr)
 	if err != nil {
-		t.Fatalf("NewSessionWithUserAgent() failed: %v", err)
+		t.Fatalf("NewSessionWithCookie() failed: %v", err)
 	}
 
 	if session == nil {
-		t.Fatal("NewSessionWithUserAgent() returned nil")
+		t.Fatal("NewSessionWithCookie() returned nil")
 	}
 
-	if session.GetUserAgent() != customUA {
-		t.Errorf("GetUserAgent() = %s, want %s", session.GetUserAgent(), customUA)
+	if !session.HasCookies() {
+		t.Error("session should have cookies set")
 	}
 }
 
-func TestSession_SetCFClearance(t *testing.T) {
+func TestSession_SetCookie(t *testing.T) {
 	session, err := NewSession()
 	if err != nil {
 		t.Fatalf("NewSession() failed: %v", err)
 	}
 
-	clearance := "test_cf_clearance_value"
-	userAgent := "Test User Agent"
-	expiresAt := time.Now().Add(30 * time.Minute)
-
-	session.SetCFClearance(clearance, userAgent, expiresAt)
-
-	if session.GetCFClearance() != clearance {
-		t.Errorf("GetCFClearance() = %s, want %s", session.GetCFClearance(), clearance)
+	if session.HasCookies() {
+		t.Error("new session should not have cookies")
 	}
 
-	if session.GetUserAgent() != userAgent {
-		t.Errorf("GetUserAgent() = %s, want %s", session.GetUserAgent(), userAgent)
-	}
+	// Set a cookie string
+	session.SetCookie("JSESSIONID=test123; 39ce7=abc456; cf_clearance=xyz789")
 
-	if !session.IsCFClearanceValid() {
-		t.Error("IsCFClearanceValid() should return true")
+	if !session.HasCookies() {
+		t.Error("session should have cookies after SetCookie")
 	}
 }
 
-func TestSession_SetSessionCookies(t *testing.T) {
+func TestSession_SetCookie_Complex(t *testing.T) {
 	session, err := NewSession()
 	if err != nil {
 		t.Fatalf("NewSession() failed: %v", err)
 	}
 
-	jsessionID := "test-jsessionid-12345"
-	ce7Cookie := "test-39ce7-cookie"
-	handle := "testuser"
+	// Full browser cookie string
+	cookieStr := "JSESSIONID=24FF903C9002F539DCDE4C869C77C1DD; 39ce7=CFtzSSKd; _gid=GA1.2.1125406761.1766998527; cf_clearance=abc123"
+	session.SetCookie(cookieStr)
 
-	session.SetSessionCookies(jsessionID, ce7Cookie, handle)
-
-	if session.Handle() != handle {
-		t.Errorf("Handle() = %s, want %s", session.Handle(), handle)
-	}
-
-	if !session.HasSessionCookies() {
-		t.Error("HasSessionCookies() should return true after setting cookies")
-	}
-
-	if session.ExpiresAt().IsZero() {
-		t.Error("ExpiresAt() should be set after setting session cookies")
+	if !session.HasCookies() {
+		t.Error("session should have cookies")
 	}
 }
 
-func TestSession_SetFullAuth(t *testing.T) {
+func TestSession_SetCookie_Empty(t *testing.T) {
 	session, err := NewSession()
 	if err != nil {
 		t.Fatalf("NewSession() failed: %v", err)
 	}
 
-	cfClearance := "test_clearance"
-	userAgent := "Test UA"
-	cfClearExp := time.Now().Add(30 * time.Minute)
-	jsessionID := "jsession123"
-	ce7Cookie := "ce7cookie456"
-	handle := "testhandle"
+	session.SetCookie("")
 
-	session.SetFullAuth(cfClearance, userAgent, cfClearExp, jsessionID, ce7Cookie, handle)
-
-	if !session.IsCFClearanceValid() {
-		t.Error("cf_clearance should be valid")
-	}
-
-	if !session.HasSessionCookies() {
-		t.Error("session cookies should be set")
-	}
-
-	if !session.IsAuthenticated() {
-		t.Error("session should be authenticated")
-	}
-
-	if !session.IsReadyForSubmission() {
-		t.Error("session should be ready for submission")
+	if session.HasCookies() {
+		t.Error("session should not have cookies after empty SetCookie")
 	}
 }
 
-func TestSession_IsCFClearanceValid_NotSet(t *testing.T) {
+func TestSession_SetHandle(t *testing.T) {
 	session, err := NewSession()
 	if err != nil {
 		t.Fatalf("NewSession() failed: %v", err)
 	}
 
-	if session.IsCFClearanceValid() {
-		t.Error("IsCFClearanceValid() should return false when not set")
-	}
-}
-
-func TestSession_IsCFClearanceValid_Expired(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
+	if session.Handle() != "" {
+		t.Error("new session handle should be empty")
 	}
 
-	// Set expired clearance
-	session.SetCFClearance("expired_clearance", "UA", time.Now().Add(-1*time.Hour))
-
-	if session.IsCFClearanceValid() {
-		t.Error("IsCFClearanceValid() should return false for expired clearance")
-	}
-}
-
-func TestSession_CFClearanceExpiresIn(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	// No clearance set - should return 0
-	if session.CFClearanceExpiresIn() != 0 {
-		t.Error("CFClearanceExpiresIn() should return 0 when not set")
-	}
-
-	// Set future clearance
-	session.SetCFClearance("test", "UA", time.Now().Add(30*time.Minute))
-	expiresIn := session.CFClearanceExpiresIn()
-	if expiresIn <= 0 {
-		t.Error("CFClearanceExpiresIn() should return positive for future expiry")
-	}
-}
-
-func TestSession_HasSessionCookies_Empty(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	if session.HasSessionCookies() {
-		t.Error("HasSessionCookies() should return false for new session")
-	}
-}
-
-func TestSession_HasSessionCookies_OnlyJSessionID(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	session.SetSessionCookies("jsessionid123", "", "handle")
-
-	if !session.HasSessionCookies() {
-		t.Error("HasSessionCookies() should return true with only JSESSIONID")
-	}
-}
-
-func TestSession_HasSessionCookies_OnlyCE7(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	session.SetSessionCookies("", "ce7cookie123", "handle")
-
-	if !session.HasSessionCookies() {
-		t.Error("HasSessionCookies() should return true with only 39ce7")
+	session.SetHandle("testuser")
+	if session.Handle() != "testuser" {
+		t.Errorf("Handle() = %s, want testuser", session.Handle())
 	}
 }
 
 func TestSession_IsAuthenticated(t *testing.T) {
 	tests := []struct {
-		name         string
-		cfClearance  string
-		cfClearExp   time.Time
-		jsessionID   string
-		ce7Cookie    string
-		wantAuth     bool
+		name     string
+		cookie   string
+		wantAuth bool
 	}{
 		{
-			name:     "no cookies at all",
+			name:     "no cookies",
+			cookie:   "",
 			wantAuth: false,
 		},
 		{
-			name:        "only cf_clearance",
-			cfClearance: "test",
-			cfClearExp:  time.Now().Add(30 * time.Minute),
-			wantAuth:    false,
+			name:     "only random cookie",
+			cookie:   "random=value",
+			wantAuth: false,
 		},
 		{
-			name:       "only session cookies",
-			jsessionID: "test",
-			wantAuth:   false,
+			name:     "with JSESSIONID",
+			cookie:   "JSESSIONID=test123",
+			wantAuth: true,
 		},
 		{
-			name:        "cf_clearance + session cookies",
-			cfClearance: "test",
-			cfClearExp:  time.Now().Add(30 * time.Minute),
-			jsessionID:  "test",
-			wantAuth:    true,
-		},
-		{
-			name:        "expired cf_clearance + session cookies",
-			cfClearance: "test",
-			cfClearExp:  time.Now().Add(-1 * time.Hour),
-			jsessionID:  "test",
-			wantAuth:    false,
+			name:     "with X-User",
+			cookie:   "X-User=test123",
+			wantAuth: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			session, _ := NewSession()
-
-			if tt.cfClearance != "" {
-				session.SetCFClearance(tt.cfClearance, "UA", tt.cfClearExp)
-			}
-			if tt.jsessionID != "" || tt.ce7Cookie != "" {
-				session.SetSessionCookies(tt.jsessionID, tt.ce7Cookie, "handle")
+			if tt.cookie != "" {
+				session.SetCookie(tt.cookie)
 			}
 
 			if session.IsAuthenticated() != tt.wantAuth {
@@ -280,44 +154,43 @@ func TestSession_IsAuthenticated(t *testing.T) {
 
 func TestSession_IsReadyForSubmission(t *testing.T) {
 	tests := []struct {
-		name        string
-		cfClearance string
-		cfClearExp  time.Time
-		jsessionID  string
-		handle      string
-		wantReady   bool
+		name      string
+		cookie    string
+		handle    string
+		wantReady bool
 	}{
 		{
 			name:      "nothing set",
 			wantReady: false,
 		},
 		{
-			name:        "authenticated but no handle",
-			cfClearance: "test",
-			cfClearExp:  time.Now().Add(30 * time.Minute),
-			jsessionID:  "test",
-			handle:      "",
-			wantReady:   false,
+			name:      "only cookie",
+			cookie:    "JSESSIONID=test123",
+			handle:    "",
+			wantReady: false,
 		},
 		{
-			name:        "fully configured",
-			cfClearance: "test",
-			cfClearExp:  time.Now().Add(30 * time.Minute),
-			jsessionID:  "test",
-			handle:      "testuser",
-			wantReady:   true,
+			name:      "only handle",
+			cookie:    "",
+			handle:    "testuser",
+			wantReady: false,
+		},
+		{
+			name:      "both set",
+			cookie:    "JSESSIONID=test123",
+			handle:    "testuser",
+			wantReady: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			session, _ := NewSession()
-
-			if tt.cfClearance != "" {
-				session.SetCFClearance(tt.cfClearance, "UA", tt.cfClearExp)
+			if tt.cookie != "" {
+				session.SetCookie(tt.cookie)
 			}
-			if tt.jsessionID != "" {
-				session.SetSessionCookies(tt.jsessionID, "", tt.handle)
+			if tt.handle != "" {
+				session.SetHandle(tt.handle)
 			}
 
 			if session.IsReadyForSubmission() != tt.wantReady {
@@ -327,52 +200,19 @@ func TestSession_IsReadyForSubmission(t *testing.T) {
 	}
 }
 
-func TestSession_Handle(t *testing.T) {
+func TestSession_HasCookies(t *testing.T) {
 	session, err := NewSession()
 	if err != nil {
 		t.Fatalf("NewSession() failed: %v", err)
 	}
 
-	if session.Handle() != "" {
-		t.Error("new session handle should be empty")
+	if session.HasCookies() {
+		t.Error("new session should not have cookies")
 	}
 
-	session.SetSessionCookies("jsession", "ce7", "testuser")
-	if session.Handle() != "testuser" {
-		t.Errorf("Handle() = %s, want testuser", session.Handle())
-	}
-}
-
-func TestSession_ExpiresAt(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	// New session should have zero time
-	if !session.ExpiresAt().IsZero() {
-		t.Error("new session ExpiresAt should be zero")
-	}
-
-	// Set session cookies to trigger expiry setting
-	session.SetSessionCookies("jsession", "ce7", "handle")
-
-	if session.ExpiresAt().IsZero() {
-		t.Error("ExpiresAt should be set after setting session cookies")
-	}
-}
-
-func TestSession_CFClearanceExpiresAt(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	expiry := time.Now().Add(30 * time.Minute)
-	session.SetCFClearance("test", "UA", expiry)
-
-	if !session.CFClearanceExpiresAt().Equal(expiry) {
-		t.Errorf("CFClearanceExpiresAt() = %v, want %v", session.CFClearanceExpiresAt(), expiry)
+	session.SetCookie("test=value")
+	if !session.HasCookies() {
+		t.Error("session should have cookies after SetCookie")
 	}
 }
 
@@ -405,17 +245,6 @@ func TestSession_GetCSRFToken(t *testing.T) {
 	session.csrfToken = "test-token-12345"
 	if session.GetCSRFToken() != "test-token-12345" {
 		t.Errorf("GetCSRFToken() = %s, want test-token-12345", session.GetCSRFToken())
-	}
-}
-
-func TestSession_GetUserAgent_Default(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	if session.GetUserAgent() != UserAgent {
-		t.Errorf("GetUserAgent() = %s, want default %s", session.GetUserAgent(), UserAgent)
 	}
 }
 
@@ -568,15 +397,15 @@ func TestConstants(t *testing.T) {
 	if BaseURL != "https://codeforces.com" {
 		t.Errorf("BaseURL = %s, want https://codeforces.com", BaseURL)
 	}
-	if SessionExpiry != 24*time.Hour {
-		t.Errorf("SessionExpiry = %v, want 24h", SessionExpiry)
-	}
 	if UserAgent == "" {
 		t.Error("UserAgent should not be empty")
 	}
+	if MaxPageSize != 5*1024*1024 {
+		t.Errorf("MaxPageSize = %d, want 5MB", MaxPageSize)
+	}
 }
 
-func TestSession_Validate_NoClearance(t *testing.T) {
+func TestSession_Validate_NoCookies(t *testing.T) {
 	session, err := NewSession()
 	if err != nil {
 		t.Fatalf("NewSession() failed: %v", err)
@@ -584,45 +413,6 @@ func TestSession_Validate_NoClearance(t *testing.T) {
 
 	err = session.Validate()
 	if err == nil {
-		t.Error("Validate() should return error when cf_clearance not set")
-	}
-}
-
-func TestSession_Validate_NoHandle(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	session.SetCFClearance("cf_clearance_value", "UA", time.Now().Add(30*time.Minute))
-
-	err = session.Validate()
-	if err == nil {
-		t.Error("Validate() should return error when handle not set")
-	}
-}
-
-func TestSession_GetUserAgent_Custom(t *testing.T) {
-	customUA := "Custom/1.0"
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	session.userAgent = customUA
-	if session.GetUserAgent() != customUA {
-		t.Errorf("GetUserAgent() = %s, want %s", session.GetUserAgent(), customUA)
-	}
-}
-
-func TestSession_GetUserAgent_Empty(t *testing.T) {
-	session, err := NewSession()
-	if err != nil {
-		t.Fatalf("NewSession() failed: %v", err)
-	}
-
-	session.userAgent = ""
-	if session.GetUserAgent() != UserAgent {
-		t.Errorf("GetUserAgent() = %s, want default %s", session.GetUserAgent(), UserAgent)
+		t.Error("Validate() should return error when no cookies set")
 	}
 }

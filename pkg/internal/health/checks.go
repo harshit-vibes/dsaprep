@@ -2,7 +2,6 @@ package health
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/harshit-vibes/cf/pkg/internal/config"
@@ -10,61 +9,35 @@ import (
 	"github.com/harshit-vibes/cf/pkg/internal/workspace"
 )
 
-// EnvFileCheck checks the .env file
-type EnvFileCheck struct{}
+// ConfigCheck checks the configuration
+type ConfigCheck struct{}
 
-func (c *EnvFileCheck) Name() string     { return "Environment File" }
-func (c *EnvFileCheck) Category() string { return "internal" }
+func (c *ConfigCheck) Name() string     { return "Configuration" }
+func (c *ConfigCheck) Category() string { return "internal" }
 
-func (c *EnvFileCheck) Check(ctx context.Context) Result {
+func (c *ConfigCheck) Check(ctx context.Context) Result {
 	start := time.Now()
 
-	envPath, err := config.GetEnvFilePath()
-	if err != nil {
-		return Result{
-			Name:     c.Name(),
-			Category: c.Category(),
-			Status:   StatusCritical,
-			Message:  "Cannot determine .env path",
-			Details:  err.Error(),
-			Duration: time.Since(start),
-		}
-	}
-
-	if _, err := os.Stat(envPath); os.IsNotExist(err) {
+	cfg := config.Get()
+	if cfg == nil {
 		return Result{
 			Name:        c.Name(),
 			Category:    c.Category(),
 			Status:      StatusCritical,
-			Message:     ".env file not found",
-			Details:     "Expected at: " + envPath,
+			Message:     "Configuration not initialized",
 			Recoverable: true,
 			Action:      ActionAutoFix,
 			Duration:    time.Since(start),
 		}
 	}
 
-	creds, err := config.LoadCredentials()
-	if err != nil {
-		return Result{
-			Name:        c.Name(),
-			Category:    c.Category(),
-			Status:      StatusCritical,
-			Message:     ".env file corrupted",
-			Details:     err.Error(),
-			Recoverable: true,
-			Action:      ActionAutoFix,
-			Duration:    time.Since(start),
-		}
-	}
-
-	if !creds.HasHandle() {
+	if !config.HasHandle() {
 		return Result{
 			Name:     c.Name(),
 			Category: c.Category(),
 			Status:   StatusDegraded,
 			Message:  "CF handle not configured",
-			Details:  "Set CF_HANDLE in ~/.cf.env",
+			Details:  "Run: cf config set cf_handle YOUR_HANDLE",
 			Action:   ActionUserPrompt,
 			Duration: time.Since(start),
 		}
@@ -74,14 +47,46 @@ func (c *EnvFileCheck) Check(ctx context.Context) Result {
 		Name:     c.Name(),
 		Category: c.Category(),
 		Status:   StatusHealthy,
-		Message:  "Environment file OK",
+		Message:  "Configuration OK (@" + config.GetCFHandle() + ")",
 		Duration: time.Since(start),
 	}
 }
 
-func (c *EnvFileCheck) AutoFix(ctx context.Context) error {
-	return config.EnsureEnvFile()
+func (c *ConfigCheck) AutoFix(ctx context.Context) error {
+	return config.Init("")
 }
+
+// CookieCheck checks if the browser cookie is configured
+type CookieCheck struct{}
+
+func (c *CookieCheck) Name() string     { return "Cookie" }
+func (c *CookieCheck) Category() string { return "internal" }
+
+func (c *CookieCheck) Check(ctx context.Context) Result {
+	start := time.Now()
+
+	if !config.HasCookie() {
+		return Result{
+			Name:     c.Name(),
+			Category: c.Category(),
+			Status:   StatusDegraded,
+			Message:  "Browser cookie not configured",
+			Details:  "Run: cf config set cookie 'YOUR_COOKIE_STRING'",
+			Action:   ActionUserPrompt,
+			Duration: time.Since(start),
+		}
+	}
+
+	return Result{
+		Name:     c.Name(),
+		Category: c.Category(),
+		Status:   StatusHealthy,
+		Message:  "Cookie configured",
+		Duration: time.Since(start),
+	}
+}
+
+func (c *CookieCheck) IsCritical() bool { return false }
 
 // WorkspaceCheck checks the workspace
 type WorkspaceCheck struct {
@@ -132,11 +137,7 @@ func (c *WorkspaceCheck) Check(ctx context.Context) Result {
 }
 
 func (c *WorkspaceCheck) AutoFix(ctx context.Context) error {
-	creds, _ := config.LoadCredentials()
-	handle := ""
-	if creds != nil {
-		handle = creds.CFHandle
-	}
+	handle := config.GetCFHandle()
 	return c.ws.Init("DSA Practice", handle)
 }
 
@@ -212,111 +213,3 @@ func (c *SchemaVersionCheck) Check(ctx context.Context) Result {
 		Duration: time.Since(start),
 	}
 }
-
-// ConfigCheck checks the configuration
-type ConfigCheck struct{}
-
-func (c *ConfigCheck) Name() string     { return "Configuration" }
-func (c *ConfigCheck) Category() string { return "internal" }
-
-func (c *ConfigCheck) Check(ctx context.Context) Result {
-	start := time.Now()
-
-	cfg := config.Get()
-	if cfg == nil {
-		return Result{
-			Name:        c.Name(),
-			Category:    c.Category(),
-			Status:      StatusCritical,
-			Message:     "Configuration not initialized",
-			Recoverable: true,
-			Action:      ActionAutoFix,
-			Duration:    time.Since(start),
-		}
-	}
-
-	return Result{
-		Name:     c.Name(),
-		Category: c.Category(),
-		Status:   StatusHealthy,
-		Message:  "Configuration OK",
-		Duration: time.Since(start),
-	}
-}
-
-func (c *ConfigCheck) AutoFix(ctx context.Context) error {
-	return config.Init("")
-}
-
-// SessionCheck checks the CF session cookie configuration
-type SessionCheck struct{}
-
-func (c *SessionCheck) Name() string     { return "CF Session" }
-func (c *SessionCheck) Category() string { return "internal" }
-
-func (c *SessionCheck) Check(ctx context.Context) Result {
-	start := time.Now()
-
-	creds, err := config.LoadCredentials()
-	if err != nil {
-		return Result{
-			Name:     c.Name(),
-			Category: c.Category(),
-			Status:   StatusDegraded,
-			Message:  "Cannot load credentials",
-			Details:  err.Error(),
-			Duration: time.Since(start),
-		}
-	}
-
-	// Check if cf_clearance is configured and valid
-	if !creds.IsCFClearanceValid() {
-		return Result{
-			Name:     c.Name(),
-			Category: c.Category(),
-			Status:   StatusDegraded,
-			Message:  "cf_clearance not configured or expired",
-			Details:  "Extract cf_clearance from browser (DevTools > Application > Cookies)",
-			Action:   ActionUserPrompt,
-			Duration: time.Since(start),
-		}
-	}
-
-	// Check if session cookies are configured
-	if !creds.HasSessionCookies() {
-		return Result{
-			Name:        c.Name(),
-			Category:    c.Category(),
-			Status:      StatusDegraded,
-			Message:     "Session cookies not configured",
-			Details:     "Extract JSESSIONID and 39ce7 cookies from browser",
-			Recoverable: true,
-			Action:      ActionUserPrompt,
-			Duration:    time.Since(start),
-		}
-	}
-
-	// Check if ready for submission
-	if !creds.IsReadyForSubmission() {
-		return Result{
-			Name:        c.Name(),
-			Category:    c.Category(),
-			Status:      StatusDegraded,
-			Message:     "Missing handle or cookies",
-			Details:     "Set CF_HANDLE and all session cookies in ~/.cf.env",
-			Recoverable: true,
-			Action:      ActionUserPrompt,
-			Duration:    time.Since(start),
-		}
-	}
-
-	return Result{
-		Name:     c.Name(),
-		Category: c.Category(),
-		Status:   StatusHealthy,
-		Message:  "Session configured (" + creds.GetCFClearanceStatus() + ")",
-		Duration: time.Since(start),
-	}
-}
-
-func (c *SessionCheck) IsCritical() bool { return false }

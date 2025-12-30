@@ -87,19 +87,15 @@ func getHandle(args []string) (string, error) {
 		return args[0], nil
 	}
 
-	creds, err := config.LoadCredentials()
-	if err != nil || creds == nil || creds.CFHandle == "" {
+	handle := config.GetCFHandle()
+	if handle == "" {
 		return "", fmt.Errorf("no handle provided and no CF handle configured. Set with 'cf config set cf_handle <handle>'")
 	}
 
-	return creds.CFHandle, nil
+	return handle, nil
 }
 
 func getAPIClient() *cfapi.Client {
-	creds, _ := config.LoadCredentials()
-	if creds != nil && creds.IsAPIConfigured() {
-		return cfapi.NewClient(cfapi.WithAPICredentials(creds.APIKey, creds.APISecret))
-	}
 	return cfapi.NewClient()
 }
 

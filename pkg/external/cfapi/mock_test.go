@@ -830,27 +830,6 @@ func TestClient_FilterProblems_RatingFilter(t *testing.T) {
 	}
 }
 
-func TestClient_WithAPICredentials_Mock(t *testing.T) {
-	transport := &mockTransport{
-		statusCode: 200,
-		body:       `{"status":"OK","result":[{"id":1,"name":"Contest 1"}]}`,
-	}
-	client := NewClient(
-		WithAPICredentials("test-api-key", "test-api-secret"),
-		WithHTTPClient(&http.Client{Transport: transport}),
-	)
-
-	if !client.HasCredentials() {
-		t.Error("Client should have credentials")
-	}
-
-	// Make a request that uses auth (contest.standings uses auth)
-	_, err := client.GetContests(context.Background(), false)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-}
-
 func TestClient_ClearCache_Mock(t *testing.T) {
 	transport := &mockTransport{
 		statusCode: 200,
@@ -873,13 +852,6 @@ func TestClient_ClearCache_Mock(t *testing.T) {
 	}
 	if len(contests) > 0 && contests[0].ID != 2 {
 		t.Errorf("Expected contest ID 2 after cache clear, got %d", contests[0].ID)
-	}
-}
-
-func TestClient_HasCredentials_False(t *testing.T) {
-	client := NewClient()
-	if client.HasCredentials() {
-		t.Error("Client should not have credentials by default")
 	}
 }
 

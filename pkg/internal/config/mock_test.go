@@ -4,125 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
-// ============ Additional Coverage Tests ============
-
-func TestCredentials_GetCFClearanceStatus_ExpiringSoon(t *testing.T) {
-	// Set expiration to 3 minutes from now (less than 5 minutes threshold)
-	creds := Credentials{
-		CFClearance:        "test_clearance",
-		CFClearanceExpires: time.Now().Add(3 * time.Minute).Unix(),
-	}
-
-	status := creds.GetCFClearanceStatus()
-	if status == "" {
-		t.Error("GetCFClearanceStatus() returned empty string")
-	}
-	// Should contain "expiring soon"
-	if status == "not configured" || status == "expired" {
-		t.Errorf("Expected 'expiring soon' status, got: %s", status)
-	}
-}
-
-func TestLoadCredentials_MalformedLine(t *testing.T) {
-	// Save original home and restore after test
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create env file with malformed lines (no equals sign)
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-malformed line without equals
-CF_API_KEY=testkey
-another malformed line
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
-
-	// Load credentials - should not error, just skip malformed lines
-	creds, err := LoadCredentials()
-	if err != nil {
-		t.Fatalf("LoadCredentials() error = %v", err)
-	}
-
-	if creds.CFHandle != "testuser" {
-		t.Errorf("CFHandle = %v, want testuser", creds.CFHandle)
-	}
-	if creds.APIKey != "testkey" {
-		t.Errorf("APIKey = %v, want testkey", creds.APIKey)
-	}
-}
-
-func TestLoadCredentials_EmptyCFClearanceExpires(t *testing.T) {
-	// Save original home and restore after test
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create env file with empty CF_CLEARANCE_EXPIRES
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_CLEARANCE=test_clearance
-CF_CLEARANCE_EXPIRES=
-CF_CLEARANCE_UA=Test UA
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
-
-	creds, err := LoadCredentials()
-	if err != nil {
-		t.Fatalf("LoadCredentials() error = %v", err)
-	}
-
-	// CFClearanceExpires should be 0 when empty
-	if creds.CFClearanceExpires != 0 {
-		t.Errorf("CFClearanceExpires = %v, want 0", creds.CFClearanceExpires)
-	}
-}
-
-func TestEnsureEnvFile_AlreadyExists(t *testing.T) {
-	// Save original home and restore after test
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create the env file first
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	originalContent := "# Original content\nCF_HANDLE=original"
-	err := os.WriteFile(envPath, []byte(originalContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
-
-	// Call EnsureEnvFile - should not overwrite existing file
-	err = EnsureEnvFile()
-	if err != nil {
-		t.Fatalf("EnsureEnvFile() error = %v", err)
-	}
-
-	// Verify original content is preserved
-	content, err := os.ReadFile(envPath)
-	if err != nil {
-		t.Fatalf("Failed to read env file: %v", err)
-	}
-
-	if string(content) != originalContent {
-		t.Error("EnsureEnvFile() overwrote existing file")
-	}
-}
+// ============ Config Tests ============
 
 func TestGetWorkspacePath_WithConfiguredPath(t *testing.T) {
 	// Set up config with a specific workspace path
@@ -180,39 +64,10 @@ func TestDifficultyRange_Fields(t *testing.T) {
 	}
 }
 
-func TestCredentials_AllFieldsSet(t *testing.T) {
-	creds := Credentials{
-		APIKey:             "test_key",
-		APISecret:          "test_secret",
-		CFHandle:           "testuser",
-		JSESSIONID:         "session123",
-		CE7Cookie:          "ce7value",
-		CFClearance:        "clearance123",
-		CFClearanceExpires: 9999999999,
-		CFClearanceUA:      "Test User Agent",
-	}
-
-	// Verify all check functions work with full credentials
-	if !creds.IsAPIConfigured() {
-		t.Error("IsAPIConfigured() should return true")
-	}
-	if !creds.HasHandle() {
-		t.Error("HasHandle() should return true")
-	}
-	if !creds.HasSessionCookies() {
-		t.Error("HasSessionCookies() should return true")
-	}
-	if !creds.IsCFClearanceValid() {
-		t.Error("IsCFClearanceValid() should return true")
-	}
-	if !creds.IsReadyForSubmission() {
-		t.Error("IsReadyForSubmission() should return true")
-	}
-}
-
 func TestConfig_Fields(t *testing.T) {
 	cfg := Config{
 		CFHandle: "testuser",
+		Cookie:   "test_cookie_string",
 		Difficulty: DifficultyRange{
 			Min: 800,
 			Max: 1400,
@@ -223,6 +78,9 @@ func TestConfig_Fields(t *testing.T) {
 
 	if cfg.CFHandle != "testuser" {
 		t.Errorf("CFHandle = %v, want testuser", cfg.CFHandle)
+	}
+	if cfg.Cookie != "test_cookie_string" {
+		t.Errorf("Cookie = %v, want test_cookie_string", cfg.Cookie)
 	}
 	if cfg.Difficulty.Min != 800 {
 		t.Errorf("Difficulty.Min = %v, want 800", cfg.Difficulty.Min)
@@ -235,5 +93,71 @@ func TestConfig_Fields(t *testing.T) {
 	}
 	if cfg.WorkspacePath != "/workspace" {
 		t.Errorf("WorkspacePath = %v, want /workspace", cfg.WorkspacePath)
+	}
+}
+
+func TestHasCookie(t *testing.T) {
+	tests := []struct {
+		name   string
+		cookie string
+		want   bool
+	}{
+		{"empty cookie", "", false},
+		{"with cookie", "JSESSIONID=test123", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			globalConfig = &Config{Cookie: tt.cookie}
+			if got := HasCookie(); got != tt.want {
+				t.Errorf("HasCookie() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHasHandle(t *testing.T) {
+	tests := []struct {
+		name   string
+		handle string
+		want   bool
+	}{
+		{"empty handle", "", false},
+		{"with handle", "testuser", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			globalConfig = &Config{CFHandle: tt.handle}
+			if got := HasHandle(); got != tt.want {
+				t.Errorf("HasHandle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetCookie(t *testing.T) {
+	expectedCookie := "JSESSIONID=test123; 39ce7=abc456"
+	globalConfig = &Config{Cookie: expectedCookie}
+
+	if got := GetCookie(); got != expectedCookie {
+		t.Errorf("GetCookie() = %v, want %v", got, expectedCookie)
+	}
+}
+
+func TestGetCFHandle_MockTest(t *testing.T) {
+	expectedHandle := "testuser"
+	globalConfig = &Config{CFHandle: expectedHandle}
+
+	if got := GetCFHandle(); got != expectedHandle {
+		t.Errorf("GetCFHandle() = %v, want %v", got, expectedHandle)
+	}
+}
+
+func TestGetCFHandle_NilConfig_MockTest(t *testing.T) {
+	globalConfig = nil
+
+	if got := GetCFHandle(); got != "" {
+		t.Errorf("GetCFHandle() with nil config = %v, want empty string", got)
 	}
 }

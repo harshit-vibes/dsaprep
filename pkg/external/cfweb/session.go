@@ -16,32 +16,24 @@ import (
 
 // Pre-compiled regexes for CSRF token extraction
 var (
-	reCSRFInput1   = regexp.MustCompile(`<input[^>]+name="csrf_token"[^>]+value="([^"]+)"`)
-	reCSRFInput2   = regexp.MustCompile(`<input[^>]+value="([^"]+)"[^>]+name="csrf_token"`)
-	reCSRFMeta     = regexp.MustCompile(`<meta[^>]+name="X-Csrf-Token"[^>]+content="([^"]+)"`)
-	reCSRFJS       = regexp.MustCompile(`Codeforces\.getCsrfToken[^"]*"([^"]+)"`)
-	reHiddenInput1 = regexp.MustCompile(`<input[^>]+name="([^"]+)"[^>]+value="([^"]*)"`)
-	reHiddenInput2 = regexp.MustCompile(`<input[^>]+value="([^"]*)"[^>]+name="([^"]+)"`)
+	reCSRFInput1 = regexp.MustCompile(`<input[^>]+name="csrf_token"[^>]+value="([^"]+)"`)
+	reCSRFInput2 = regexp.MustCompile(`<input[^>]+value="([^"]+)"[^>]+name="csrf_token"`)
+	reCSRFMeta   = regexp.MustCompile(`<meta[^>]+name="X-Csrf-Token"[^>]+content="([^"]+)"`)
+	reCSRFJS     = regexp.MustCompile(`Codeforces\.getCsrfToken[^"]*"([^"]+)"`)
 )
 
 const (
-	BaseURL         = "https://codeforces.com"
-	UserAgent       = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-	SessionExpiry   = 24 * time.Hour
-	MaxPageSize     = 5 * 1024 * 1024 // 5MB max page size to prevent OOM
+	BaseURL     = "https://codeforces.com"
+	UserAgent   = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	MaxPageSize = 5 * 1024 * 1024 // 5MB max page size to prevent OOM
 )
 
-// Session manages CF web authentication using pre-extracted cookies
-// No login functionality - users extract cookies from browser
+// Session manages CF web authentication using browser cookies
 type Session struct {
-	client      *http.Client
-	jar         *cookiejar.Jar
-	csrfToken   string
-	handle      string
-	expiresAt   time.Time
-	cfClearance string    // cf_clearance cookie for Cloudflare bypass
-	cfClearExp  time.Time // cf_clearance expiration
-	userAgent   string    // User-Agent tied to cf_clearance (MUST match)
+	client    *http.Client
+	jar       *cookiejar.Jar
+	csrfToken string
+	handle    string
 }
 
 // NewSession creates a new CF session
@@ -59,118 +51,97 @@ func NewSession() (*Session, error) {
 	}
 
 	return &Session{
-		client:    client,
-		jar:       jar,
-		userAgent: UserAgent,
+		client: client,
+		jar:    jar,
 	}, nil
 }
 
-// NewSessionWithUserAgent creates a new CF session with custom User-Agent
-// This is important for Cloudflare bypass - the User-Agent MUST match the one
-// used to obtain the cf_clearance cookie
-func NewSessionWithUserAgent(ua string) (*Session, error) {
+// NewSessionWithCookie creates a session with the provided cookie string
+// Cookie format: "JSESSIONID=xxx; 39ce7=xxx; cf_clearance=xxx; ..."
+func NewSessionWithCookie(cookieStr string) (*Session, error) {
 	session, err := NewSession()
 	if err != nil {
 		return nil, err
 	}
-	session.userAgent = ua
+
+	if cookieStr != "" {
+		session.SetCookie(cookieStr)
+	}
+
 	return session, nil
 }
 
-// SetCFClearance sets the cf_clearance cookie for Cloudflare bypass
-// The userAgent parameter MUST match the User-Agent used to obtain the cookie
-func (s *Session) SetCFClearance(clearance, userAgent string, expiresAt time.Time) {
-	s.cfClearance = clearance
-	s.cfClearExp = expiresAt
-	s.userAgent = userAgent
-
-	cfURL, _ := url.Parse(BaseURL)
-	cookies := []*http.Cookie{
-		{
-			Name:     "cf_clearance",
-			Value:    clearance,
-			Path:     "/",
-			Domain:   ".codeforces.com",
-			Expires:  expiresAt,
-			HttpOnly: true,
-			Secure:   true,
-		},
-	}
-	s.jar.SetCookies(cfURL, cookies)
-}
-
-// SetSessionCookies sets session cookies directly (extracted from browser)
-func (s *Session) SetSessionCookies(jsessionID, ce7Cookie, handle string) {
+// SetCookie parses and sets cookies from a browser cookie string
+// Cookie format: "JSESSIONID=xxx; 39ce7=xxx; cf_clearance=xxx; ..."
+func (s *Session) SetCookie(cookieStr string) {
 	cfURL, _ := url.Parse(BaseURL)
 
 	var cookies []*http.Cookie
+	pairs := strings.Split(cookieStr, ";")
 
-	if jsessionID != "" {
-		cookies = append(cookies, &http.Cookie{
-			Name:     "JSESSIONID",
-			Value:    jsessionID,
-			Path:     "/",
-			Domain:   "codeforces.com",
-			HttpOnly: true,
-		})
-	}
+	for _, pair := range pairs {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
 
-	if ce7Cookie != "" {
-		cookies = append(cookies, &http.Cookie{
-			Name:     "39ce7",
-			Value:    ce7Cookie,
-			Path:     "/",
-			Domain:   ".codeforces.com",
-			Expires:  time.Now().Add(365 * 24 * time.Hour),
-			HttpOnly: true,
-		})
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		name := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		cookie := &http.Cookie{
+			Name:   name,
+			Value:  value,
+			Path:   "/",
+			Domain: "codeforces.com",
+		}
+
+		// Handle specific cookies
+		switch name {
+		case "cf_clearance", "39ce7":
+			cookie.Domain = ".codeforces.com"
+			cookie.Secure = true
+			cookie.HttpOnly = true
+		case "JSESSIONID":
+			cookie.HttpOnly = true
+		}
+
+		cookies = append(cookies, cookie)
 	}
 
 	if len(cookies) > 0 {
 		s.jar.SetCookies(cfURL, cookies)
 	}
+}
 
+// SetHandle sets the user handle
+func (s *Session) SetHandle(handle string) {
 	s.handle = handle
-	s.expiresAt = time.Now().Add(SessionExpiry)
 }
 
-// SetFullAuth sets all authentication cookies at once (cf_clearance + session)
-// This is the primary method for cookie-based auth
-func (s *Session) SetFullAuth(cfClearance, userAgent string, cfClearExp time.Time,
-	jsessionID, ce7Cookie, handle string) {
-	s.SetCFClearance(cfClearance, userAgent, cfClearExp)
-	s.SetSessionCookies(jsessionID, ce7Cookie, handle)
+// HasCookies returns true if any cookies are set
+func (s *Session) HasCookies() bool {
+	cfURL, _ := url.Parse(BaseURL)
+	return len(s.jar.Cookies(cfURL)) > 0
 }
 
-// IsCFClearanceValid returns true if cf_clearance is set and not expired
-func (s *Session) IsCFClearanceValid() bool {
-	if s.cfClearance == "" {
-		return false
-	}
-	return time.Now().Before(s.cfClearExp)
-}
-
-// HasSessionCookies returns true if session cookies are set
-func (s *Session) HasSessionCookies() bool {
+// IsAuthenticated returns true if session has cookies that indicate login
+func (s *Session) IsAuthenticated() bool {
 	cfURL, _ := url.Parse(BaseURL)
 	cookies := s.jar.Cookies(cfURL)
 
+	hasSession := false
 	for _, c := range cookies {
-		if c.Name == "JSESSIONID" || c.Name == "39ce7" {
-			return true
+		if c.Name == "JSESSIONID" || c.Name == "X-User" {
+			hasSession = true
+			break
 		}
 	}
-	return false
-}
-
-// IsAuthenticated returns true if session has valid cf_clearance and session cookies
-func (s *Session) IsAuthenticated() bool {
-	return s.IsCFClearanceValid() && s.HasSessionCookies()
-}
-
-// IsReadyForSubmission returns true if session can submit solutions
-func (s *Session) IsReadyForSubmission() bool {
-	return s.IsAuthenticated() && s.handle != ""
+	return hasSession
 }
 
 // get makes a GET request with proper headers
@@ -180,11 +151,7 @@ func (s *Session) get(urlStr string) (*http.Response, error) {
 		return nil, err
 	}
 
-	ua := s.userAgent
-	if ua == "" {
-		ua = UserAgent
-	}
-	req.Header.Set("User-Agent", ua)
+	req.Header.Set("User-Agent", UserAgent)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
 
@@ -204,7 +171,6 @@ func (s *Session) RefreshCSRFToken() error {
 	}
 	defer resp.Body.Close()
 
-	// Use bounded reader to prevent OOM from large responses
 	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxPageSize))
 	if err != nil {
 		return fmt.Errorf("read page: %w", err)
@@ -219,14 +185,10 @@ func (s *Session) RefreshCSRFToken() error {
 	return nil
 }
 
-// Validate checks if the session is still valid by verifying handle appears on CF
+// Validate checks if the session is still valid
 func (s *Session) Validate() error {
-	if !s.IsCFClearanceValid() {
-		return fmt.Errorf("cf_clearance expired or not set")
-	}
-
-	if s.handle == "" {
-		return fmt.Errorf("handle not set")
+	if !s.HasCookies() {
+		return fmt.Errorf("no cookies set")
 	}
 
 	resp, err := s.get(BaseURL)
@@ -235,19 +197,19 @@ func (s *Session) Validate() error {
 	}
 	defer resp.Body.Close()
 
-	// Use bounded reader to prevent OOM from large responses
 	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxPageSize))
 	if err != nil {
 		return fmt.Errorf("read response: %w", err)
 	}
 
-	// Check if we're logged in by looking for handle in page
-	if !strings.Contains(string(body), s.handle) {
-		return fmt.Errorf("session invalid - handle not found on page")
+	// Check if we're logged in by looking for logout link or handle
+	bodyStr := string(body)
+	if !strings.Contains(bodyStr, "/logout") {
+		return fmt.Errorf("session invalid - not logged in")
 	}
 
 	// Refresh CSRF token while we're at it
-	if csrfToken := extractCSRFToken(string(body)); csrfToken != "" {
+	if csrfToken := extractCSRFToken(bodyStr); csrfToken != "" {
 		s.csrfToken = csrfToken
 	}
 
@@ -259,22 +221,10 @@ func (s *Session) Handle() string {
 	return s.handle
 }
 
-// ExpiresAt returns when the session expires
-func (s *Session) ExpiresAt() time.Time {
-	return s.expiresAt
-}
-
-// CFClearanceExpiresAt returns when cf_clearance expires
-func (s *Session) CFClearanceExpiresAt() time.Time {
-	return s.cfClearExp
-}
-
-// CFClearanceExpiresIn returns time until cf_clearance expires
-func (s *Session) CFClearanceExpiresIn() time.Duration {
-	if s.cfClearance == "" {
-		return 0
-	}
-	return time.Until(s.cfClearExp)
+// IsReadyForSubmission returns true if session is ready for submitting solutions
+// Requires authentication cookies and a handle to be set
+func (s *Session) IsReadyForSubmission() bool {
+	return s.IsAuthenticated() && s.handle != ""
 }
 
 // Client returns the underlying HTTP client
@@ -282,62 +232,37 @@ func (s *Session) Client() *http.Client {
 	return s.client
 }
 
-// GetUserAgent returns the User-Agent tied to this session
-func (s *Session) GetUserAgent() string {
-	if s.userAgent == "" {
-		return UserAgent
-	}
-	return s.userAgent
-}
-
-// GetCFClearance returns the current cf_clearance value
-func (s *Session) GetCFClearance() string {
-	return s.cfClearance
-}
-
 // Helper functions
 
 // extractCSRFToken extracts CSRF token from HTML
 func extractCSRFToken(htmlStr string) string {
-	// Try input field first
 	if matches := reCSRFInput1.FindStringSubmatch(htmlStr); len(matches) > 1 {
 		return matches[1]
 	}
-
-	// Try with value before name
 	if matches := reCSRFInput2.FindStringSubmatch(htmlStr); len(matches) > 1 {
 		return matches[1]
 	}
-
-	// Try meta tag
 	if matches := reCSRFMeta.FindStringSubmatch(htmlStr); len(matches) > 1 {
 		return matches[1]
 	}
-
-	// Try JavaScript variable
 	if matches := reCSRFJS.FindStringSubmatch(htmlStr); len(matches) > 1 {
 		return matches[1]
 	}
-
 	return ""
 }
 
 // extractHiddenInput extracts value of a hidden input field
 func extractHiddenInput(htmlStr, name string) string {
-	// Use pre-compiled regex with name capture, then filter by name
-	for _, match := range reHiddenInput1.FindAllStringSubmatch(htmlStr, -1) {
-		if len(match) > 2 && match[1] == name {
-			return match[2]
-		}
+	// Pattern: <input ... name="NAME" ... value="VALUE" ...>
+	pattern := regexp.MustCompile(`<input[^>]+name="` + regexp.QuoteMeta(name) + `"[^>]+value="([^"]*)"`)
+	if matches := pattern.FindStringSubmatch(htmlStr); len(matches) > 1 {
+		return matches[1]
 	}
-
-	// Try with value before name
-	for _, match := range reHiddenInput2.FindAllStringSubmatch(htmlStr, -1) {
-		if len(match) > 2 && match[2] == name {
-			return match[1]
-		}
+	// Try alternate order: value before name
+	pattern2 := regexp.MustCompile(`<input[^>]+value="([^"]*)"[^>]+name="` + regexp.QuoteMeta(name) + `"`)
+	if matches := pattern2.FindStringSubmatch(htmlStr); len(matches) > 1 {
+		return matches[1]
 	}
-
 	return ""
 }
 

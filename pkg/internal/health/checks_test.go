@@ -4,45 +4,108 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/harshit-vibes/cf/pkg/internal/config"
 	"github.com/harshit-vibes/cf/pkg/internal/workspace"
 )
 
-func TestEnvFileCheck_Name(t *testing.T) {
-	check := &EnvFileCheck{}
-	if check.Name() != "Environment File" {
-		t.Errorf("Name() = %v, want %v", check.Name(), "Environment File")
+// ============ Config Tests ============
+
+func TestConfigCheck_Name(t *testing.T) {
+	check := &ConfigCheck{}
+	if check.Name() != "Configuration" {
+		t.Errorf("Name() = %v, want %v", check.Name(), "Configuration")
 	}
 }
 
-func TestEnvFileCheck_Category(t *testing.T) {
-	check := &EnvFileCheck{}
+func TestConfigCheck_Category(t *testing.T) {
+	check := &ConfigCheck{}
 	if check.Category() != "internal" {
 		t.Errorf("Category() = %v, want %v", check.Category(), "internal")
 	}
 }
 
-func TestEnvFileCheck_Check(t *testing.T) {
-	check := &EnvFileCheck{}
-	ctx := context.Background()
-
-	result := check.Check(ctx)
+func TestConfigCheck_Check(t *testing.T) {
+	check := &ConfigCheck{}
+	result := check.Check(context.Background())
 
 	// Result should have the check name
 	if result.Name != check.Name() {
 		t.Errorf("Result.Name = %v, want %v", result.Name, check.Name())
 	}
-	if result.Category != check.Category() {
-		t.Errorf("Result.Category = %v, want %v", result.Category, check.Category())
-	}
-	// Duration should be set
 	if result.Duration == 0 {
 		t.Error("Result.Duration should not be zero")
 	}
 }
+
+func TestConfigCheck_AutoFix(t *testing.T) {
+	check := &ConfigCheck{}
+
+	// AutoFix calls config.Init("")
+	err := check.AutoFix(context.Background())
+	// May succeed or fail depending on environment
+	// Just verify it doesn't panic
+	_ = err
+}
+
+// ============ Cookie Tests ============
+
+func TestCookieCheck_Name(t *testing.T) {
+	check := &CookieCheck{}
+	if check.Name() != "Cookie" {
+		t.Errorf("Name() = %v, want %v", check.Name(), "Cookie")
+	}
+}
+
+func TestCookieCheck_Category(t *testing.T) {
+	check := &CookieCheck{}
+	if check.Category() != "internal" {
+		t.Errorf("Category() = %v, want %v", check.Category(), "internal")
+	}
+}
+
+func TestCookieCheck_IsCritical(t *testing.T) {
+	check := &CookieCheck{}
+	if check.IsCritical() {
+		t.Error("IsCritical() should return false for CookieCheck")
+	}
+}
+
+func TestCookieCheck_Check_NoCookie(t *testing.T) {
+	// Set global config without cookie
+	config.SetGlobalConfig(&config.Config{CFHandle: "testuser", Cookie: ""})
+
+	check := &CookieCheck{}
+	result := check.Check(context.Background())
+
+	if result.Status != StatusDegraded {
+		t.Errorf("Status = %v, want %v", result.Status, StatusDegraded)
+	}
+	if result.Message != "Browser cookie not configured" {
+		t.Errorf("Message = %v, want 'Browser cookie not configured'", result.Message)
+	}
+	if result.Action != ActionUserPrompt {
+		t.Errorf("Action = %v, want %v", result.Action, ActionUserPrompt)
+	}
+}
+
+func TestCookieCheck_Check_WithCookie(t *testing.T) {
+	// Set global config with cookie
+	config.SetGlobalConfig(&config.Config{CFHandle: "testuser", Cookie: "JSESSIONID=test123"})
+
+	check := &CookieCheck{}
+	result := check.Check(context.Background())
+
+	if result.Status != StatusHealthy {
+		t.Errorf("Status = %v, want %v", result.Status, StatusHealthy)
+	}
+	if result.Message != "Cookie configured" {
+		t.Errorf("Message = %v, want 'Cookie configured'", result.Message)
+	}
+}
+
+// ============ Workspace Tests ============
 
 func TestWorkspaceCheck_Name(t *testing.T) {
 	ws := workspace.New("/tmp/test")
@@ -114,6 +177,47 @@ func TestWorkspaceCheck_AutoFix(t *testing.T) {
 	}
 }
 
+func TestNewWorkspaceCheck(t *testing.T) {
+	ws := workspace.New("/tmp/test")
+	check := NewWorkspaceCheck(ws)
+
+	if check == nil {
+		t.Fatal("NewWorkspaceCheck() returned nil")
+	}
+	if check.ws != ws {
+		t.Error("NewWorkspaceCheck() should set ws field")
+	}
+}
+
+// WorkspaceCheck test for validation failure
+func TestWorkspaceCheck_Check_ValidationFail(t *testing.T) {
+	tmpDir := t.TempDir()
+	ws := workspace.New(tmpDir)
+
+	// Initialize workspace
+	err := ws.Init("Test", "user")
+	if err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+
+	// Delete a required directory to cause validation failure
+	problemsDir := filepath.Join(tmpDir, "problems")
+	os.RemoveAll(problemsDir)
+
+	check := NewWorkspaceCheck(ws)
+	result := check.Check(context.Background())
+
+	// Should return critical (validation failed)
+	if result.Status != StatusCritical {
+		t.Errorf("Status = %v, want %v", result.Status, StatusCritical)
+	}
+	if result.Message != "Workspace validation failed" {
+		t.Errorf("Message = %v, want 'Workspace validation failed'", result.Message)
+	}
+}
+
+// ============ Schema Version Tests ============
+
 func TestSchemaVersionCheck_Name(t *testing.T) {
 	ws := workspace.New("/tmp/test")
 	check := NewSchemaVersionCheck(ws)
@@ -160,84 +264,6 @@ func TestSchemaVersionCheck_Check_ValidVersion(t *testing.T) {
 	}
 }
 
-func TestConfigCheck_Name(t *testing.T) {
-	check := &ConfigCheck{}
-	if check.Name() != "Configuration" {
-		t.Errorf("Name() = %v, want %v", check.Name(), "Configuration")
-	}
-}
-
-func TestConfigCheck_Category(t *testing.T) {
-	check := &ConfigCheck{}
-	if check.Category() != "internal" {
-		t.Errorf("Category() = %v, want %v", check.Category(), "internal")
-	}
-}
-
-func TestConfigCheck_Check(t *testing.T) {
-	check := &ConfigCheck{}
-	result := check.Check(context.Background())
-
-	// Result should have the check name
-	if result.Name != check.Name() {
-		t.Errorf("Result.Name = %v, want %v", result.Name, check.Name())
-	}
-	if result.Duration == 0 {
-		t.Error("Result.Duration should not be zero")
-	}
-}
-
-func TestSessionCheck_Name(t *testing.T) {
-	check := &SessionCheck{}
-	if check.Name() != "CF Session" {
-		t.Errorf("Name() = %v, want %v", check.Name(), "CF Session")
-	}
-}
-
-func TestSessionCheck_Category(t *testing.T) {
-	check := &SessionCheck{}
-	if check.Category() != "internal" {
-		t.Errorf("Category() = %v, want %v", check.Category(), "internal")
-	}
-}
-
-func TestSessionCheck_IsCritical(t *testing.T) {
-	check := &SessionCheck{}
-	if check.IsCritical() {
-		t.Error("IsCritical() should return false for SessionCheck")
-	}
-}
-
-func TestSessionCheck_Check(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home with no credentials
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	check := &SessionCheck{}
-	result := check.Check(context.Background())
-
-	// Without credentials file, should return degraded
-	if result.Name != check.Name() {
-		t.Errorf("Result.Name = %v, want %v", result.Name, check.Name())
-	}
-}
-
-func TestNewWorkspaceCheck(t *testing.T) {
-	ws := workspace.New("/tmp/test")
-	check := NewWorkspaceCheck(ws)
-
-	if check == nil {
-		t.Fatal("NewWorkspaceCheck() returned nil")
-	}
-	if check.ws != ws {
-		t.Error("NewWorkspaceCheck() should set ws field")
-	}
-}
-
 func TestNewSchemaVersionCheck(t *testing.T) {
 	ws := workspace.New("/tmp/test")
 	check := NewSchemaVersionCheck(ws)
@@ -247,206 +273,6 @@ func TestNewSchemaVersionCheck(t *testing.T) {
 	}
 	if check.ws != ws {
 		t.Error("NewSchemaVersionCheck() should set ws field")
-	}
-}
-
-// Integration test for full check flow
-func TestCheckerIntegration(t *testing.T) {
-	tmpDir := t.TempDir()
-	ws := workspace.New(tmpDir)
-
-	checker := NewChecker()
-	checker.AddCheck(NewWorkspaceCheck(ws))
-	checker.AddCheck(NewSchemaVersionCheck(ws))
-
-	// Run checks on uninitialized workspace
-	// Note: WorkspaceCheck has AutoFix which will initialize the workspace
-	report := checker.Run(context.Background())
-
-	// The auto-fix should have worked, so report may be healthy
-	// Verify that results contain the workspace check
-	if len(report.Results) == 0 {
-		t.Error("Report should have results")
-	}
-
-	// The workspace should now exist after auto-fix
-	if !ws.Exists() {
-		t.Error("Workspace should exist after auto-fix")
-	}
-
-	// Run checks again
-	report = checker.Run(context.Background())
-
-	// Both checks should pass on initialized workspace
-	if report.OverallStatus != StatusHealthy {
-		t.Errorf("Report.OverallStatus = %v, want %v after init", report.OverallStatus, StatusHealthy)
-	}
-	if !report.CanProceed {
-		t.Error("Report.CanProceed should be true")
-	}
-}
-
-// Test checker without auto-fix
-func TestCheckerWithoutAutoFix(t *testing.T) {
-	tmpDir := t.TempDir()
-	ws := workspace.New(tmpDir)
-
-	checker := NewChecker()
-	// Only add SchemaVersionCheck which returns healthy for non-existent workspace
-	checker.AddCheck(NewSchemaVersionCheck(ws))
-
-	report := checker.Run(context.Background())
-
-	// SchemaVersionCheck returns healthy when workspace doesn't exist
-	if report.OverallStatus != StatusHealthy {
-		t.Errorf("Report.OverallStatus = %v, want %v", report.OverallStatus, StatusHealthy)
-	}
-}
-
-// EnvFileCheck tests for uncovered branches
-func TestEnvFileCheck_Check_FileNotFound(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Ensure no .env file exists
-	os.Remove(filepath.Join(tmpDir, ".cf.env"))
-
-	check := &EnvFileCheck{}
-	result := check.Check(context.Background())
-
-	// Should return critical with recoverable=true
-	if result.Status != StatusCritical {
-		t.Errorf("Status = %v, want %v", result.Status, StatusCritical)
-	}
-	if !result.Recoverable {
-		t.Error("Recoverable should be true for missing env file")
-	}
-	if result.Action != ActionAutoFix {
-		t.Errorf("Action = %v, want %v", result.Action, ActionAutoFix)
-	}
-	if result.Message != ".env file not found" {
-		t.Errorf("Message = %v, want '.env file not found'", result.Message)
-	}
-}
-
-func TestEnvFileCheck_Check_NoHandle(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create env file without handle
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=
-CF_API_KEY=
-CF_API_SECRET=
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
-
-	check := &EnvFileCheck{}
-	result := check.Check(context.Background())
-
-	// Should return degraded (no handle configured)
-	if result.Status != StatusDegraded {
-		t.Errorf("Status = %v, want %v", result.Status, StatusDegraded)
-	}
-	if result.Message != "CF handle not configured" {
-		t.Errorf("Message = %v, want 'CF handle not configured'", result.Message)
-	}
-	if result.Action != ActionUserPrompt {
-		t.Errorf("Action = %v, want %v", result.Action, ActionUserPrompt)
-	}
-}
-
-func TestEnvFileCheck_Check_Healthy(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create valid env file with handle
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_API_KEY=testkey
-CF_API_SECRET=testsecret
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
-
-	check := &EnvFileCheck{}
-	result := check.Check(context.Background())
-
-	// Should return healthy
-	if result.Status != StatusHealthy {
-		t.Errorf("Status = %v, want %v", result.Status, StatusHealthy)
-	}
-	if result.Message != "Environment file OK" {
-		t.Errorf("Message = %v, want 'Environment file OK'", result.Message)
-	}
-}
-
-func TestEnvFileCheck_AutoFix(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	check := &EnvFileCheck{}
-	err := check.AutoFix(context.Background())
-	if err != nil {
-		t.Fatalf("AutoFix() error = %v", err)
-	}
-
-	// Verify env file was created
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	if _, err := os.Stat(envPath); os.IsNotExist(err) {
-		t.Error("AutoFix() should create env file")
-	}
-}
-
-// WorkspaceCheck test for validation failure
-func TestWorkspaceCheck_Check_ValidationFail(t *testing.T) {
-	tmpDir := t.TempDir()
-	ws := workspace.New(tmpDir)
-
-	// Initialize workspace
-	err := ws.Init("Test", "user")
-	if err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-
-	// Delete a required directory to cause validation failure
-	problemsDir := filepath.Join(tmpDir, "problems")
-	os.RemoveAll(problemsDir)
-
-	check := NewWorkspaceCheck(ws)
-	result := check.Check(context.Background())
-
-	// Should return critical (validation failed)
-	if result.Status != StatusCritical {
-		t.Errorf("Status = %v, want %v", result.Status, StatusCritical)
-	}
-	if result.Message != "Workspace validation failed" {
-		t.Errorf("Message = %v, want 'Workspace validation failed'", result.Message)
 	}
 }
 
@@ -550,203 +376,55 @@ codeforces:
 	}
 }
 
-// ConfigCheck tests for uncovered branches
-func TestConfigCheck_Check_NilConfig(t *testing.T) {
-	// Reset global config to nil
-	origConfig := config.Get()
-	// There's no direct way to set config to nil, but we can test the branch
-	// by checking when config.Get() returns nil
-
-	check := &ConfigCheck{}
-	result := check.Check(context.Background())
-
-	// The result depends on whether config is initialized
-	// Either way, the check should have proper name and category
-	if result.Name != check.Name() {
-		t.Errorf("Result.Name = %v, want %v", result.Name, check.Name())
-	}
-	if result.Category != check.Category() {
-		t.Errorf("Result.Category = %v, want %v", result.Category, check.Category())
-	}
-
-	// Restore
-	_ = origConfig
-}
-
-func TestConfigCheck_AutoFix(t *testing.T) {
-	check := &ConfigCheck{}
-
-	// AutoFix calls config.Init("")
-	err := check.AutoFix(context.Background())
-	// May succeed or fail depending on environment
-	// Just verify it doesn't panic
-	_ = err
-}
-
-// SessionCheck tests for uncovered branches
-func TestSessionCheck_Check_NoCFClearance(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
+// Integration test for full check flow
+func TestCheckerIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
+	ws := workspace.New(tmpDir)
 
-	// Create env file with handle but no cf_clearance
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_API_KEY=testkey
-CF_API_SECRET=testsecret
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
+	checker := NewChecker()
+	checker.AddCheck(NewWorkspaceCheck(ws))
+	checker.AddCheck(NewSchemaVersionCheck(ws))
+
+	// Run checks on uninitialized workspace
+	// Note: WorkspaceCheck has AutoFix which will initialize the workspace
+	report := checker.Run(context.Background())
+
+	// The auto-fix should have worked, so report may be healthy
+	// Verify that results contain the workspace check
+	if len(report.Results) == 0 {
+		t.Error("Report should have results")
 	}
 
-	check := &SessionCheck{}
-	result := check.Check(context.Background())
-
-	// Should return degraded (cf_clearance not configured)
-	if result.Status != StatusDegraded {
-		t.Errorf("Status = %v, want %v", result.Status, StatusDegraded)
-	}
-	if result.Message != "cf_clearance not configured or expired" {
-		t.Errorf("Message = %v, want 'cf_clearance not configured or expired'", result.Message)
-	}
-	if result.Action != ActionUserPrompt {
-		t.Errorf("Action = %v, want %v", result.Action, ActionUserPrompt)
-	}
-}
-
-func TestSessionCheck_Check_CFClearanceExpired(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create env file with cf_clearance but expired
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_CLEARANCE=someclearancevalue
-CF_CLEARANCE_EXPIRES=1
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
+	// The workspace should now exist after auto-fix
+	if !ws.Exists() {
+		t.Error("Workspace should exist after auto-fix")
 	}
 
-	check := &SessionCheck{}
-	result := check.Check(context.Background())
+	// Run checks again
+	report = checker.Run(context.Background())
 
-	// Should return degraded (cf_clearance expired)
-	if result.Status != StatusDegraded {
-		t.Errorf("Status = %v, want %v", result.Status, StatusDegraded)
+	// Both checks should pass on initialized workspace
+	if report.OverallStatus != StatusHealthy {
+		t.Errorf("Report.OverallStatus = %v, want %v after init", report.OverallStatus, StatusHealthy)
 	}
-	if result.Message != "cf_clearance not configured or expired" {
-		t.Errorf("Message = %v, want 'cf_clearance not configured or expired'", result.Message)
+	if !report.CanProceed {
+		t.Error("Report.CanProceed should be true")
 	}
 }
 
-func TestSessionCheck_Check_NoSessionCookies(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
+// Test checker without auto-fix
+func TestCheckerWithoutAutoFix(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
+	ws := workspace.New(tmpDir)
 
-	// Create env file with valid cf_clearance but no session cookies
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_CLEARANCE=someclearancevalue
-CF_CLEARANCE_EXPIRES=9999999999
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
+	checker := NewChecker()
+	// Only add SchemaVersionCheck which returns healthy for non-existent workspace
+	checker.AddCheck(NewSchemaVersionCheck(ws))
 
-	check := &SessionCheck{}
-	result := check.Check(context.Background())
+	report := checker.Run(context.Background())
 
-	// Should return degraded (no session cookies)
-	if result.Status != StatusDegraded {
-		t.Errorf("Status = %v, want %v", result.Status, StatusDegraded)
-	}
-	if result.Message != "Session cookies not configured" {
-		t.Errorf("Message = %v, want 'Session cookies not configured'", result.Message)
-	}
-}
-
-func TestSessionCheck_Check_SessionConfigured(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create env file with all required cookies
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_CLEARANCE=someclearancevalue
-CF_CLEARANCE_EXPIRES=9999999999
-CF_JSESSIONID=somejsessionid
-CF_39CE7=some39ce7value
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
-
-	check := &SessionCheck{}
-	result := check.Check(context.Background())
-
-	// Should return healthy (session configured)
-	if result.Status != StatusHealthy {
-		t.Errorf("Status = %v, want %v (message: %s, details: %s)", result.Status, StatusHealthy, result.Message, result.Details)
-	}
-	// Message should contain "Session configured"
-	if !strings.Contains(result.Message, "Session configured") {
-		t.Errorf("Message = %v, want to contain 'Session configured'", result.Message)
-	}
-}
-
-func TestSessionCheck_Check_MissingHandle(t *testing.T) {
-	// Save and restore HOME
-	origHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", origHome)
-
-	// Use temp directory as home
-	tmpDir := t.TempDir()
-	os.Setenv("HOME", tmpDir)
-
-	// Create env file with cookies but no handle
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_CLEARANCE=someclearancevalue
-CF_CLEARANCE_EXPIRES=9999999999
-CF_JSESSIONID=somejsessionid
-CF_39CE7=some39ce7value
-`
-	err := os.WriteFile(envPath, []byte(envContent), 0600)
-	if err != nil {
-		t.Fatalf("Failed to write env file: %v", err)
-	}
-
-	check := &SessionCheck{}
-	result := check.Check(context.Background())
-
-	// Should return degraded (missing handle)
-	if result.Status != StatusDegraded {
-		t.Errorf("Status = %v, want %v", result.Status, StatusDegraded)
-	}
-	if result.Message != "Missing handle or cookies" {
-		t.Errorf("Message = %v, want 'Missing handle or cookies'", result.Message)
+	// SchemaVersionCheck returns healthy when workspace doesn't exist
+	if report.OverallStatus != StatusHealthy {
+		t.Errorf("Report.OverallStatus = %v, want %v", report.OverallStatus, StatusHealthy)
 	}
 }

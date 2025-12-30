@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/harshit-vibes/cf/pkg/external/cfapi"
 	"github.com/harshit-vibes/cf/pkg/external/cfweb"
 	"github.com/harshit-vibes/cf/pkg/internal/config"
 	"github.com/harshit-vibes/cf/pkg/internal/workspace"
@@ -129,21 +128,13 @@ func runProblemList(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Get API client
-	creds, _ := config.LoadCredentials()
-	var client *cfapi.Client
-	if creds != nil && creds.IsAPIConfigured() {
-		client = cfapi.NewClient(cfapi.WithAPICredentials(creds.APIKey, creds.APISecret))
-	} else {
-		client = cfapi.NewClient()
-	}
+	client := getAPIClient()
 
 	// Get handle for exclude-solved
 	handle := ""
 	if excludeSolved {
-		if creds != nil && creds.CFHandle != "" {
-			handle = creds.CFHandle
-		} else {
+		handle = config.GetCFHandle()
+		if handle == "" {
 			return fmt.Errorf("--unsolved requires CF handle to be configured")
 		}
 	}
@@ -227,14 +218,7 @@ func runProblemFetch(cmd *cobra.Command, args []string) error {
 		fmt.Printf("✓ Fetched %s. %s to workspace\n", problem.Index, problem.Name)
 	} else {
 		// Fetch all problems from contest
-		creds, _ := config.LoadCredentials()
-		var client *cfapi.Client
-		if creds != nil && creds.IsAPIConfigured() {
-			client = cfapi.NewClient(cfapi.WithAPICredentials(creds.APIKey, creds.APISecret))
-		} else {
-			client = cfapi.NewClient()
-		}
-
+		client := getAPIClient()
 		standings, err := client.GetContestStandings(ctx, contestID, 1, 1, nil, false)
 		if err != nil {
 			return fmt.Errorf("failed to get contest problems: %w", err)

@@ -8,6 +8,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+// Note: time is still used for time.Millisecond in tests
+
 func TestParseTime(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -155,8 +157,8 @@ func TestNewSubmitter_MissingHandle(t *testing.T) {
 	}
 
 	// Set cookies but no handle
-	session.SetCFClearance("test-clearance", UserAgent, time.Now().Add(1*time.Hour))
-	session.SetSessionCookies("test-jsessionid", "test-39ce7", "")
+	session.SetCookie("JSESSIONID=test-jsessionid; 39ce7=test-39ce7; cf_clearance=test-clearance")
+	// Don't set handle
 
 	_, err = NewSubmitter(session)
 	if err == nil {
@@ -170,15 +172,9 @@ func TestNewSubmitter_Authenticated(t *testing.T) {
 		t.Fatalf("NewSession() failed: %v", err)
 	}
 
-	// Set full authentication
-	session.SetFullAuth(
-		"test-clearance",
-		UserAgent,
-		time.Now().Add(1*time.Hour),
-		"test-jsessionid",
-		"test-39ce7",
-		"testuser",
-	)
+	// Set full authentication using new API
+	session.SetCookie("JSESSIONID=test-jsessionid; 39ce7=test-39ce7; cf_clearance=test-clearance")
+	session.SetHandle("testuser")
 
 	submitter, err := NewSubmitter(session)
 	if err != nil {
@@ -196,14 +192,8 @@ func TestNewSubmitter_Authenticated(t *testing.T) {
 
 func TestSubmitter_Struct(t *testing.T) {
 	session, _ := NewSession()
-	session.SetFullAuth(
-		"test-clearance",
-		UserAgent,
-		time.Now().Add(1*time.Hour),
-		"test-jsessionid",
-		"test-39ce7",
-		"testuser",
-	)
+	session.SetCookie("JSESSIONID=test-jsessionid; 39ce7=test-39ce7; cf_clearance=test-clearance")
+	session.SetHandle("testuser")
 
 	submitter := &Submitter{session: session}
 

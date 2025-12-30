@@ -125,21 +125,13 @@ func runStartupChecks() error {
 	ws := workspace.New(wsPath)
 
 	// Internal checks
-	checker.AddCheck(&health.EnvFileCheck{})
 	checker.AddCheck(&health.ConfigCheck{})
+	checker.AddCheck(&health.CookieCheck{})
 	checker.AddCheck(health.NewWorkspaceCheck(ws))
 	checker.AddCheck(health.NewSchemaVersionCheck(ws))
-	checker.AddCheck(&health.SessionCheck{})
 
-	// External checks (only if we have credentials)
-	creds, _ := config.LoadCredentials()
-	var apiClient *cfapi.Client
-	if creds != nil && creds.IsAPIConfigured() {
-		apiClient = cfapi.NewClient(cfapi.WithAPICredentials(creds.APIKey, creds.APISecret))
-	} else {
-		apiClient = cfapi.NewClient()
-	}
-
+	// External checks
+	apiClient := cfapi.NewClient()
 	parser := cfweb.NewParserWithClient(nil)
 
 	checker.AddCheck(exthealth.NewCFAPICheck(apiClient))
@@ -219,11 +211,7 @@ var initCmd = &cobra.Command{
 			return fmt.Errorf("workspace already exists at %s", path)
 		}
 
-		creds, _ := config.LoadCredentials()
-		handle := ""
-		if creds != nil {
-			handle = creds.CFHandle
-		}
+		handle := config.GetCFHandle()
 
 		if err := ws.Init("DSA Practice", handle); err != nil {
 			return fmt.Errorf("failed to initialize workspace: %w", err)

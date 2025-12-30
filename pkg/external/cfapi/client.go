@@ -2,14 +2,11 @@ package cfapi
 
 import (
 	"context"
-	"crypto/sha512"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -30,20 +27,10 @@ type Client struct {
 	httpClient *http.Client
 	limiter    *rate.Limiter
 	cache      *Cache
-	apiKey     string
-	apiSecret  string
 }
 
 // ClientOption configures the client
 type ClientOption func(*Client)
-
-// WithAPICredentials sets API key and secret for authenticated requests
-func WithAPICredentials(key, secret string) ClientOption {
-	return func(c *Client) {
-		c.apiKey = key
-		c.apiSecret = secret
-	}
-}
 
 // WithHTTPClient sets a custom HTTP client
 func WithHTTPClient(client *http.Client) ClientOption {
@@ -75,7 +62,7 @@ func NewClient(opts ...ClientOption) *Client {
 }
 
 // request makes an API request with rate limiting
-func (c *Client) request(ctx context.Context, method string, params url.Values, useAuth bool) ([]byte, error) {
+func (c *Client) request(ctx context.Context, method string, params url.Values) ([]byte, error) {
 	// Wait for rate limiter
 	if err := c.limiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limit: %w", err)
@@ -86,11 +73,6 @@ func (c *Client) request(ctx context.Context, method string, params url.Values, 
 
 	if params == nil {
 		params = url.Values{}
-	}
-
-	// Add authentication if required
-	if useAuth && c.apiKey != "" && c.apiSecret != "" {
-		c.signRequest(method, params)
 	}
 
 	fullURL := u + "?" + params.Encode()
@@ -121,44 +103,6 @@ func (c *Client) request(ctx context.Context, method string, params url.Values, 
 	return body, nil
 }
 
-// signRequest adds authentication parameters to the request
-func (c *Client) signRequest(method string, params url.Values) {
-	rand := strconv.FormatInt(time.Now().UnixNano()%1000000, 10)
-	params.Set("apiKey", c.apiKey)
-	params.Set("time", strconv.FormatInt(time.Now().Unix(), 10))
-
-	// Sort parameters
-	var keys []string
-	for k := range params {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	// Build signature string
-	var sb strings.Builder
-	sb.WriteString(rand)
-	sb.WriteString("/")
-	sb.WriteString(method)
-	sb.WriteString("?")
-
-	for i, k := range keys {
-		if i > 0 {
-			sb.WriteString("&")
-		}
-		sb.WriteString(k)
-		sb.WriteString("=")
-		sb.WriteString(params.Get(k))
-	}
-	sb.WriteString("#")
-	sb.WriteString(c.apiSecret)
-
-	// Calculate SHA512 hash
-	hash := sha512.Sum512([]byte(sb.String()))
-	sig := hex.EncodeToString(hash[:])
-
-	params.Set("apiSig", rand+sig)
-}
-
 // GetProblems retrieves all problems from the problemset
 func (c *Client) GetProblems(ctx context.Context, tags []string) (*ProblemsResponse, error) {
 	cacheKey := "problems:" + strings.Join(tags, ",")
@@ -173,7 +117,7 @@ func (c *Client) GetProblems(ctx context.Context, tags []string) (*ProblemsRespo
 		params.Set("tags", strings.Join(tags, ";"))
 	}
 
-	body, err := c.request(ctx, "problemset.problems", params, false)
+	body, err := c.request(ctx, "problemset.problems", params)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +150,7 @@ func (c *Client) GetUserInfo(ctx context.Context, handles []string) ([]User, err
 	params := url.Values{}
 	params.Set("handles", strings.Join(handles, ";"))
 
-	body, err := c.request(ctx, "user.info", params, false)
+	body, err := c.request(ctx, "user.info", params)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +185,7 @@ func (c *Client) GetUserSubmissions(ctx context.Context, handle string, from, co
 		params.Set("count", strconv.Itoa(count))
 	}
 
-	body, err := c.request(ctx, "user.status", params, false)
+	body, err := c.request(ctx, "user.status", params)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +214,7 @@ func (c *Client) GetUserRating(ctx context.Context, handle string) ([]RatingChan
 	params := url.Values{}
 	params.Set("handle", handle)
 
-	body, err := c.request(ctx, "user.rating", params, false)
+	body, err := c.request(ctx, "user.rating", params)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +267,7 @@ func (c *Client) GetContests(ctx context.Context, gym bool) ([]Contest, error) {
 	params := url.Values{}
 	params.Set("gym", strconv.FormatBool(gym))
 
-	body, err := c.request(ctx, "contest.list", params, false)
+	body, err := c.request(ctx, "contest.list", params)
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +300,7 @@ func (c *Client) GetContestStandings(ctx context.Context, contestID int, from, c
 	}
 	params.Set("showUnofficial", strconv.FormatBool(showUnofficial))
 
-	body, err := c.request(ctx, "contest.standings", params, false)
+	body, err := c.request(ctx, "contest.standings", params)
 	if err != nil {
 		return nil, err
 	}
@@ -473,9 +417,4 @@ func (c *Client) Ping(ctx context.Context) error {
 // ClearCache clears the API cache
 func (c *Client) ClearCache() {
 	c.cache.Clear()
-}
-
-// HasCredentials returns true if API credentials are configured
-func (c *Client) HasCredentials() bool {
-	return c.apiKey != "" && c.apiSecret != ""
 }

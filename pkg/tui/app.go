@@ -51,20 +51,11 @@ type App struct {
 
 // New creates a new App instance
 func New() *App {
-	// Load credentials
-	creds, _ := config.LoadCredentials()
-	handle := ""
-	if creds != nil {
-		handle = creds.CFHandle
-	}
+	// Get handle from config
+	handle := config.GetCFHandle()
 
 	// Create API client
-	var client *cfapi.Client
-	if creds != nil && creds.IsAPIConfigured() {
-		client = cfapi.NewClient(cfapi.WithAPICredentials(creds.APIKey, creds.APISecret))
-	} else {
-		client = cfapi.NewClient()
-	}
+	client := cfapi.NewClient()
 
 	// Create spinner
 	s := spinner.New()

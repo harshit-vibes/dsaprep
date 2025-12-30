@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/harshit-vibes/cf/pkg/external/cfapi"
-	"github.com/harshit-vibes/cf/pkg/internal/config"
 )
 
 var (
@@ -139,14 +138,7 @@ func runContestProblems(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	creds, _ := config.LoadCredentials()
-	var client *cfapi.Client
-	if creds != nil && creds.IsAPIConfigured() {
-		client = cfapi.NewClient(cfapi.WithAPICredentials(creds.APIKey, creds.APISecret))
-	} else {
-		client = cfapi.NewClient()
-	}
-
+	client := getAPIClient()
 	standings, err := client.GetContestStandings(ctx, contestID, 1, 1, nil, false)
 	if err != nil {
 		return fmt.Errorf("failed to get contest: %w", err)

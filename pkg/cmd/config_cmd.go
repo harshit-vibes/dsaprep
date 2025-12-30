@@ -89,18 +89,15 @@ func runConfigGet(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  workspace_path:  %s\n", valueOrEmpty(cfg.WorkspacePath))
 		fmt.Println()
 
-		// Also show credentials status
-		creds, _ := config.LoadCredentials()
-		if creds != nil {
-			fmt.Println("🔑 Credentials (~/.cf.env):")
-			fmt.Println(strings.Repeat("─", 40))
-			fmt.Printf("  CF_HANDLE:       %s\n", valueOrEmpty(creds.CFHandle))
-			fmt.Printf("  CF_API_KEY:      %s\n", maskValue(creds.APIKey))
-			fmt.Printf("  CF_API_SECRET:   %s\n", maskValue(creds.APISecret))
-			fmt.Printf("  CF_JSESSIONID:   %s\n", maskValue(creds.JSESSIONID))
-			fmt.Printf("  CF_CLEARANCE:    %s\n", creds.GetCFClearanceStatus())
-			fmt.Println()
+		// Show authentication status
+		fmt.Println("🔑 Authentication:")
+		fmt.Println(strings.Repeat("─", 40))
+		cookieStatus := "(not set)"
+		if config.HasCookie() {
+			cookieStatus = "(configured)"
 		}
+		fmt.Printf("  cookie:          %s\n", cookieStatus)
+		fmt.Println()
 
 		return nil
 	}
@@ -168,15 +165,9 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 }
 
 func runConfigPath(cmd *cobra.Command, args []string) error {
-	envPath, err := config.GetEnvFilePath()
-	if err != nil {
-		return err
-	}
-
 	fmt.Println("\n📁 Configuration Files:")
 	fmt.Println(strings.Repeat("─", 40))
-	fmt.Printf("  Config:      ~/.cf/config.yaml\n")
-	fmt.Printf("  Credentials: %s\n", envPath)
+	fmt.Printf("  Config: ~/.cf/config.yaml\n")
 	fmt.Println()
 
 	return nil

@@ -3,7 +3,6 @@ package cfapi
 import (
 	"context"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 )
@@ -22,25 +21,6 @@ func TestNewClient_Defaults(t *testing.T) {
 	}
 	if client.cache == nil {
 		t.Error("cache should not be nil")
-	}
-	if client.apiKey != "" {
-		t.Error("apiKey should be empty by default")
-	}
-	if client.apiSecret != "" {
-		t.Error("apiSecret should be empty by default")
-	}
-}
-
-func TestNewClient_WithAPICredentials(t *testing.T) {
-	client := NewClient(
-		WithAPICredentials("mykey", "mysecret"),
-	)
-
-	if client.apiKey != "mykey" {
-		t.Errorf("apiKey = %v, want %v", client.apiKey, "mykey")
-	}
-	if client.apiSecret != "mysecret" {
-		t.Errorf("apiSecret = %v, want %v", client.apiSecret, "mysecret")
 	}
 }
 
@@ -68,48 +48,15 @@ func TestNewClient_WithCacheTTL(t *testing.T) {
 func TestNewClient_MultipleOptions(t *testing.T) {
 	customClient := &http.Client{Timeout: 45 * time.Second}
 	client := NewClient(
-		WithAPICredentials("key", "secret"),
 		WithHTTPClient(customClient),
 		WithCacheTTL(15 * time.Minute),
 	)
 
-	if client.apiKey != "key" {
-		t.Errorf("apiKey = %v, want %v", client.apiKey, "key")
-	}
-	if client.apiSecret != "secret" {
-		t.Errorf("apiSecret = %v, want %v", client.apiSecret, "secret")
-	}
 	if client.httpClient != customClient {
 		t.Error("httpClient should be custom")
 	}
 	if client.cache.ttl != 15*time.Minute {
 		t.Errorf("cache.ttl = %v, want %v", client.cache.ttl, 15*time.Minute)
-	}
-}
-
-func TestClient_HasCredentials(t *testing.T) {
-	tests := []struct {
-		name   string
-		key    string
-		secret string
-		want   bool
-	}{
-		{"both set", "key", "secret", true},
-		{"only key", "key", "", false},
-		{"only secret", "", "secret", false},
-		{"neither set", "", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := NewClient()
-			client.apiKey = tt.key
-			client.apiSecret = tt.secret
-
-			if got := client.HasCredentials(); got != tt.want {
-				t.Errorf("HasCredentials() = %v, want %v", got, tt.want)
-			}
-		})
 	}
 }
 
@@ -176,20 +123,6 @@ func TestClient_CacheInteraction(t *testing.T) {
 	cachedProblems := cached.(*ProblemsResponse)
 	if len(cachedProblems.Problems) != 1 {
 		t.Errorf("len(Problems) = %v, want 1", len(cachedProblems.Problems))
-	}
-}
-
-func TestWithAPICredentials_Option(t *testing.T) {
-	opt := WithAPICredentials("testkey", "testsecret")
-
-	client := &Client{}
-	opt(client)
-
-	if client.apiKey != "testkey" {
-		t.Errorf("apiKey = %v, want testkey", client.apiKey)
-	}
-	if client.apiSecret != "testsecret" {
-		t.Errorf("apiSecret = %v, want testsecret", client.apiSecret)
 	}
 }
 
@@ -488,86 +421,5 @@ func TestClient_Request_RateLimiting(t *testing.T) {
 	// With rate limit of 5/sec, 3 requests should take at least 400ms
 	if elapsed < 200*time.Millisecond {
 		t.Logf("Rate limiting may not be effective, elapsed: %v", elapsed)
-	}
-}
-
-// Test signRequest directly
-func TestClient_signRequest_Format(t *testing.T) {
-	client := NewClient(
-		WithAPICredentials("testkey123", "testsecret456"),
-	)
-
-	params := url.Values{}
-	params.Set("handle", "tourist")
-
-	// Call signRequest
-	client.signRequest("user.info", params)
-
-	// Verify apiKey was set
-	if params.Get("apiKey") != "testkey123" {
-		t.Errorf("apiKey = %s, want testkey123", params.Get("apiKey"))
-	}
-
-	// Verify time was set
-	if params.Get("time") == "" {
-		t.Error("time should be set")
-	}
-
-	// Verify apiSig was set and has correct format
-	apiSig := params.Get("apiSig")
-	if apiSig == "" {
-		t.Error("apiSig should be set")
-	}
-	// apiSig format: rand + sha512 hash (6 digits + 128 hex chars)
-	if len(apiSig) < 100 {
-		t.Errorf("apiSig seems too short: %d chars", len(apiSig))
-	}
-}
-
-func TestClient_signRequest_Consistency(t *testing.T) {
-	client := NewClient(
-		WithAPICredentials("key", "secret"),
-	)
-
-	// Same params should produce valid signature (structure test, not value equality due to time)
-	params1 := url.Values{}
-	params1.Set("handle", "test")
-	client.signRequest("user.info", params1)
-
-	// All required fields should be present
-	requiredFields := []string{"apiKey", "time", "apiSig"}
-	for _, field := range requiredFields {
-		if params1.Get(field) == "" {
-			t.Errorf("%s should be set", field)
-		}
-	}
-}
-
-func TestClient_signRequest_MultipleParams(t *testing.T) {
-	client := NewClient(
-		WithAPICredentials("key", "secret"),
-	)
-
-	params := url.Values{}
-	params.Set("handle", "tourist")
-	params.Set("from", "1")
-	params.Set("count", "10")
-
-	client.signRequest("user.status", params)
-
-	// Original params should still be present
-	if params.Get("handle") != "tourist" {
-		t.Error("handle should still be present")
-	}
-	if params.Get("from") != "1" {
-		t.Error("from should still be present")
-	}
-	if params.Get("count") != "10" {
-		t.Error("count should still be present")
-	}
-
-	// Auth params should be added
-	if params.Get("apiKey") != "key" {
-		t.Error("apiKey should be set")
 	}
 }

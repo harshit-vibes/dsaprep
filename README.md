@@ -193,33 +193,13 @@ workspace/
 
 ## Configuration
 
-### Config Files
+### Config File
 
-Configuration is stored in:
-- `~/.cf/config.yaml` - Main configuration
-- `~/.cf.env` - API credentials
-
-### Setting Up Credentials
-
-Create `~/.cf.env`:
-
-```bash
-# Get your API key from https://codeforces.com/settings/api
-CF_HANDLE=your_username
-CF_API_KEY=your_api_key
-CF_API_SECRET=your_api_secret
-
-# Optional: Session cookies for submissions
-CF_JSESSIONID=
-CF_39CE7=
-```
-
-### Configuration Options
-
-Edit `~/.cf/config.yaml`:
+Configuration is stored in `~/.cf/config.yaml`:
 
 ```yaml
 cf_handle: your_handle
+cookie: "JSESSIONID=xxx; 39ce7=xxx; cf_clearance=xxx"
 difficulty:
   min: 800
   max: 1400
@@ -227,14 +207,43 @@ daily_goal: 3
 workspace_path: /path/to/workspace
 ```
 
-## Migration from dsaprep
+### Setting Your Handle
 
-If you were using the previous version (dsaprep), your configuration will be automatically migrated on first run:
+```bash
+cf config set cf_handle your_codeforces_handle
+```
 
-- `~/.dsaprep/` → `~/.cf/`
-- `~/.dsaprep.env` → `~/.cf.env`
+### Setting Up Cookie Authentication
 
-Your original files are preserved.
+The cookie is required for features like solution submission. Here's how to get it:
+
+1. **Open Codeforces** in your browser and log in
+2. **Open Developer Tools** (F12 or Cmd+Option+I)
+3. **Go to the Network tab**
+4. **Refresh the page** or navigate to any Codeforces page
+5. **Click on any request** to codeforces.com (e.g., the main document)
+6. **Find the "Cookie" header** in the Request Headers section
+7. **Copy the entire cookie string** - it should look like:
+   ```
+   JSESSIONID=24FF903C9002F539DCDE4C869C77C1DD; 39ce7=CFtzSSKd; cf_clearance=abc123...
+   ```
+8. **Set it in cf**:
+   ```bash
+   cf config set cookie 'JSESSIONID=24FF903C9002F539DCDE4C869C77C1DD; 39ce7=CFtzSSKd; cf_clearance=...'
+   ```
+
+> **Note:** Cookies expire periodically (especially `cf_clearance`). If you encounter authentication errors, repeat this process to get fresh cookies.
+
+### Configuration Options
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `cf_handle` | Your Codeforces username | (required) |
+| `cookie` | Browser cookie string for authenticated requests | (optional) |
+| `difficulty.min` | Minimum problem difficulty for recommendations | 800 |
+| `difficulty.max` | Maximum problem difficulty for recommendations | 1400 |
+| `daily_goal` | Number of problems to solve per day | 3 |
+| `workspace_path` | Path to your workspace directory | current directory |
 
 ## Using as a Go SDK
 

@@ -101,17 +101,15 @@ func (m SettingsModel) Update(msg tea.Msg) (SettingsModel, tea.Cmd) {
 func (m SettingsModel) View() string {
 	// Load current config values
 	cfg := config.Get()
-	creds, _ := config.LoadCredentials()
 
 	// Update item values
 	if cfg != nil {
 		for i := range m.items {
 			switch m.items[i].key {
 			case "cf_handle":
-				if creds != nil && creds.CFHandle != "" {
-					m.items[i].value = creds.CFHandle
-				} else {
-					m.items[i].value = cfg.CFHandle
+				m.items[i].value = cfg.CFHandle
+				if m.items[i].value == "" {
+					m.items[i].value = "(not set)"
 				}
 			case "difficulty.min":
 				m.items[i].value = fmt.Sprintf("%d", cfg.Difficulty.Min)
@@ -144,26 +142,18 @@ func (m SettingsModel) View() string {
 
 	b.WriteString("\n")
 
-	// Credentials section
-	b.WriteString(styles.TitleStyle.Render("🔑 Credentials"))
+	// Authentication section
+	b.WriteString(styles.TitleStyle.Render("🔑 Authentication"))
 	b.WriteString("\n")
-	b.WriteString(styles.SubtitleStyle.Render("  Stored in ~/.cf.env"))
+	b.WriteString(styles.SubtitleStyle.Render("  Cookie-based authentication for submissions"))
 	b.WriteString("\n\n")
 
-	if creds != nil {
-		b.WriteString(m.renderCredentialItem("API Key", maskValue(creds.APIKey)))
-		b.WriteString("\n")
-		b.WriteString(m.renderCredentialItem("API Secret", maskValue(creds.APISecret)))
-		b.WriteString("\n")
-		b.WriteString(m.renderCredentialItem("Session", func() string {
-			if creds.HasSessionCookies() {
-				return styles.SuccessStyle.Render("configured")
-			}
-			return styles.WarningStyle.Render("not configured")
-		}()))
-		b.WriteString("\n")
-		b.WriteString(m.renderCredentialItem("CF Clearance", creds.GetCFClearanceStatus()))
+	// Show cookie status
+	cookieStatus := styles.WarningStyle.Render("not configured")
+	if config.HasCookie() {
+		cookieStatus = styles.SuccessStyle.Render("configured")
 	}
+	b.WriteString(m.renderCredentialItem("Cookie", cookieStatus))
 
 	b.WriteString("\n\n")
 	b.WriteString(styles.HelpStyle.Render("  ↑/↓ navigate • Use 'cf config set <key> <value>' to modify settings"))

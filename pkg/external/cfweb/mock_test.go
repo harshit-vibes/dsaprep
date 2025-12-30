@@ -37,14 +37,8 @@ func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 func createMockSession(transport http.RoundTripper) *Session {
 	session, _ := NewSession()
 	session.client = &http.Client{Transport: transport}
-	session.SetFullAuth(
-		"test-clearance",
-		UserAgent,
-		time.Now().Add(1*time.Hour),
-		"test-jsessionid",
-		"test-ce7",
-		"testuser",
-	)
+	session.SetCookie("JSESSIONID=test-jsessionid; 39ce7=test-ce7; cf_clearance=test-clearance")
+	session.SetHandle("testuser")
 	return session
 }
 
@@ -153,7 +147,7 @@ func TestSession_Validate_HandleNotFound(t *testing.T) {
 func TestSession_Validate_Success(t *testing.T) {
 	transport := &mockTransport{
 		statusCode: 200,
-		body:       `<html>var handle = "testuser";</html>`,
+		body:       `<html><a href="/logout">Logout</a>var handle = "testuser";</html>`,
 	}
 	session := createMockSession(transport)
 
@@ -943,7 +937,8 @@ func TestSubmitter_WaitForVerdict_NetworkErrorDuringPolling(t *testing.T) {
 
 func TestSession_Get_RequestCreationError(t *testing.T) {
 	session, _ := NewSession()
-	session.SetFullAuth("test", UserAgent, time.Now().Add(1*time.Hour), "jsid", "ce7", "user")
+	session.SetCookie("JSESSIONID=jsid; 39ce7=ce7; cf_clearance=test")
+	session.SetHandle("user")
 
 	// Invalid URL should cause request creation to fail
 	_, err := session.get("://invalid-url")
