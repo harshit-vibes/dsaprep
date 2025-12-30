@@ -26,6 +26,7 @@ If no key is provided, shows all configuration.
 
 Available keys:
   cf_handle       - Your Codeforces handle
+  cookie          - Browser cookie for authentication
   difficulty.min  - Minimum problem difficulty
   difficulty.max  - Maximum problem difficulty
   daily_goal      - Daily problem solving goal
@@ -45,6 +46,7 @@ var configSetCmd = &cobra.Command{
 
 Available keys:
   cf_handle       - Your Codeforces handle
+  cookie          - Browser cookie string for authentication
   difficulty.min  - Minimum problem difficulty (e.g., 800)
   difficulty.max  - Maximum problem difficulty (e.g., 1400)
   daily_goal      - Daily problem solving goal (e.g., 3)
@@ -52,8 +54,8 @@ Available keys:
 
 Examples:
   cf config set cf_handle tourist
-  cf config set difficulty.min 1000
-  cf config set daily_goal 5`,
+  cf config set cookie 'JSESSIONID=xxx; 39ce7=xxx; cf_clearance=xxx'
+  cf config set difficulty.min 1000`,
 	Args: cobra.ExactArgs(2),
 	RunE: runConfigSet,
 }
@@ -107,6 +109,8 @@ func runConfigGet(cmd *cobra.Command, args []string) error {
 	switch key {
 	case "cf_handle":
 		fmt.Println(valueOrEmpty(cfg.CFHandle))
+	case "cookie":
+		fmt.Println(maskValue(cfg.Cookie))
 	case "difficulty.min":
 		fmt.Println(cfg.Difficulty.Min)
 	case "difficulty.max":
@@ -130,6 +134,8 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 	switch key {
 	case "cf_handle":
 		err = config.SetCFHandle(value)
+	case "cookie":
+		err = config.SetCookie(value)
 	case "difficulty.min":
 		var min int
 		if _, e := fmt.Sscanf(value, "%d", &min); e != nil {
@@ -153,7 +159,7 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 	case "workspace_path":
 		err = config.SetWorkspacePath(value)
 	default:
-		return fmt.Errorf("unknown config key: %s\n\nAvailable keys: cf_handle, difficulty.min, difficulty.max, daily_goal, workspace_path", key)
+		return fmt.Errorf("unknown config key: %s\n\nAvailable keys: cf_handle, cookie, difficulty.min, difficulty.max, daily_goal, workspace_path", key)
 	}
 
 	if err != nil {

@@ -436,13 +436,8 @@ func TestRunStartupChecks_WithChecks(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("HOME", tmpDir)
 
-	// Create a minimal env file
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_API_KEY=
-CF_API_SECRET=
-`
-	os.WriteFile(envPath, []byte(envContent), 0600)
+	// Set up config with test handle
+	config.SetGlobalConfig(&config.Config{CFHandle: "testuser"})
 
 	// Run with skipChecks=false (default)
 	skipChecks = false
@@ -483,9 +478,8 @@ func TestRunPreChecks_RegularCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("HOME", tmpDir)
 
-	// Create env file
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
+	// Set up config with test handle
+	config.SetGlobalConfig(&config.Config{CFHandle: "testuser"})
 
 	skipChecks = true
 	defer func() { skipChecks = false }()
@@ -505,9 +499,8 @@ func TestHealthCommand_RunE(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("HOME", tmpDir)
 
-	// Create env file
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
+	// Set up config with test handle
+	config.SetGlobalConfig(&config.Config{CFHandle: "testuser"})
 
 	// Reset verbose and skipChecks
 	origVerbose := verbose
@@ -574,7 +567,7 @@ func TestParseCommand_ValidContestID(t *testing.T) {
 	}
 }
 
-func TestRunStartupChecks_WithAPICredentials(t *testing.T) {
+func TestRunStartupChecks_WithCookie(t *testing.T) {
 	// Save and restore HOME
 	origHome := os.Getenv("HOME")
 	defer os.Setenv("HOME", origHome)
@@ -583,22 +576,17 @@ func TestRunStartupChecks_WithAPICredentials(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("HOME", tmpDir)
 
-	// Create env file with API credentials
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	envContent := `CF_HANDLE=testuser
-CF_API_KEY=testkey
-CF_API_SECRET=testsecret
-`
-	os.WriteFile(envPath, []byte(envContent), 0600)
-
-	// Initialize config
-	config.Init(filepath.Join(tmpDir, ".cf"))
+	// Set up config with test handle and cookie
+	config.SetGlobalConfig(&config.Config{
+		CFHandle: "testuser",
+		Cookie:   "JSESSIONID=test123; 39ce7=abc456",
+	})
 
 	skipChecks = false
 	verbose = false
 
 	err := runStartupChecks()
-	// May succeed or fail, but tests the API credentials path
+	// May succeed or fail, but tests the cookie authentication path
 	_ = err
 }
 
@@ -611,9 +599,8 @@ func TestRunStartupChecks_WithWorkspace(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("HOME", tmpDir)
 
-	// Create env file
-	envPath := filepath.Join(tmpDir, ".cf.env")
-	os.WriteFile(envPath, []byte("CF_HANDLE=testuser\n"), 0600)
+	// Set up config with test handle
+	config.SetGlobalConfig(&config.Config{CFHandle: "testuser"})
 
 	// Initialize workspace
 	wsPath := filepath.Join(tmpDir, "workspace")

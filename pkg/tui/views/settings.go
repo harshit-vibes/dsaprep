@@ -63,6 +63,12 @@ func NewSettingsModel() SettingsModel {
 				description: "Path to your cf workspace",
 				editable:    true,
 			},
+			{
+				key:         "cookie",
+				label:       "Cookie",
+				description: "Browser cookie for authentication",
+				editable:    true,
+			},
 		},
 	}
 }
@@ -120,6 +126,12 @@ func (m SettingsModel) View() string {
 			case "workspace_path":
 				if cfg.WorkspacePath != "" {
 					m.items[i].value = cfg.WorkspacePath
+				} else {
+					m.items[i].value = "(not set)"
+				}
+			case "cookie":
+				if cfg.Cookie != "" {
+					m.items[i].value = "(configured)"
 				} else {
 					m.items[i].value = "(not set)"
 				}
